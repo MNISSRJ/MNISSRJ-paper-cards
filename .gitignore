@@ -1,0 +1,16 @@
+# Dependencies and generated native projects
+node_modules/
+android/
+ios/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Never commit private configuration. cloud-config.js intentionally contains
+# only the public Supabase URL and publishable key required by the web client.
+.env
+.env.*
+!.env.example

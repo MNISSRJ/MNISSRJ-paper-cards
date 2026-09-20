@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eee9df">
+<meta name="description" content="纸卡：离线可用的间隔复习学习卡片。">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon.svg">
+<script src="./cloud-config.js"></script>
+<title>纸卡 · Paper Cards</title>
+<style>
+:root{
+ --bg:#eee9df;--surface:#f8f3ea;--paper:#fffdf8;--paper2:#fbf7ef;
+ --ink:#292724;--muted:#91887c;--line:#d6cdbf;--soft:#e4dbcf;
+ --danger:#984b42;--shadow:0 18px 40px rgba(64,53,40,.13);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:pan-y;background:var(--bg)}
+body{color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+button,input,textarea{font:inherit}button{cursor:pointer}
+button:active{transform:translateY(1px)}
+.app{width:100%;height:100dvh;max-width:1440px;margin:auto;padding:16px 24px;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto}
+.brand{display:flex;align-items:baseline;gap:10px}.brand-cn{font:700 34px Georgia,"Songti SC",serif}.brand-en{font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.top-total{font-size:12px;color:var(--muted)}.top-actions{display:flex;align-items:center;gap:7px}.install-btn{font-size:11px;padding:7px 10px;display:none}.account-btn{font-size:11px;padding:7px 10px;white-space:nowrap}.sync-state{font-size:10px;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shell{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr);gap:22px;overflow:hidden}
+.sidebar{min-height:0;border-right:1px solid rgba(150,135,115,.22);padding:5px 18px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.space-title{font-weight:700;margin:0 0 10px}
+.home-nav,.folder{width:100%;border:1px solid transparent;background:transparent;color:#554f48;border-radius:12px;text-align:left;padding:11px 12px}
+.home-nav{background:var(--surface);border-color:var(--line);margin-bottom:18px}
+.home-nav.active,.folder.active{background:var(--ink);color:white;border-color:var(--ink)}
+.section-title{display:flex;align-items:center;justify-content:space-between;font-weight:700;margin:0 0 7px}
+.icon-btn{width:32px;height:32px;border:1px solid var(--line);background:var(--surface);border-radius:9px;color:#5f584f}
+.folder-list{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px;padding-right:2px}
+.folder .count{float:right;color:inherit;opacity:.55;font-size:12px}
+.folder-add{margin-top:9px;border:1px dashed #b9ad9e;background:transparent;color:#665e55;border-radius:11px;padding:10px}
+.hint{font-size:10px;color:#aaa196;line-height:1.5;margin-top:7px}
+.main{min-width:0;min-height:0;height:100%;overflow:hidden;position:relative}
+.page{display:none;width:100%;height:100%;min-height:0;overflow:hidden}.page.active{display:flex;flex-direction:column}
+
+/* Home */
+.home-card{border:1px solid var(--line);background:rgba(255,253,248,.74);border-radius:18px;padding:22px;flex:0 0 auto}
+.home-row{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.eyebrow{font-size:11px;color:var(--muted);letter-spacing:.12em}.home-title{font:700 27px Georgia,"Songti SC",serif;margin-top:5px}.home-desc{font-size:12px;color:var(--muted);margin-top:5px}
+.home-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);background:var(--surface);color:#514b44;border-radius:10px;padding:8px 12px}.btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.danger{color:var(--danger)}
+.check-status{margin-top:16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#776f65}.dot{width:8px;height:8px;border-radius:50%;background:#bcb3a7}.dot.on{background:var(--ink)}
+.dashboard{flex:1;min-height:0;display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+.dash-panel{min-height:0;border:1px solid var(--line);border-radius:16px;background:rgba(255,253,248,.52);padding:17px;overflow:hidden}
+.dash-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.dash-heading strong{font-size:14px}.dash-heading span{font-size:11px;color:var(--muted)}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.calendar-grid .weekday{text-align:center;font-size:10px;color:#a59c90;padding:3px}.day{height:34px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:#81786d;border:1px solid transparent}.day.empty{background:transparent}.day.checked{background:var(--ink);color:#fff}.day.today{border-color:#a69b8c}
+.month-nav{border:0;background:transparent;color:#756d63;padding:3px 7px}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.mini-stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px}.mini-stat b{display:block;font:700 24px Georgia,"Songti SC",serif}.mini-stat span{font-size:10px;color:var(--muted)}.home-tip{margin-top:12px;font-size:11px;color:#9a9185;line-height:1.6}
+
+/* Folder workspace */
+.folder-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;flex:0 0 auto}.folder-title{font:700 clamp(24px,3vw,30px) Georgia,"Songti SC",serif}.folder-sub{font-size:11px;color:var(--muted);margin-top:4px}.head-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.stats{display:flex;gap:7px}.stat{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:7px 10px;color:#554f48;font-size:11px}.stat b{font-size:15px;margin-right:3px}.stat.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.progress{height:5px;background:#ddd5c9;border-radius:99px;overflow:hidden;margin:10px 0}.progress i{height:100%;display:block;width:0;background:var(--ink);border-radius:99px;transition:width .2s}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}.toolbar .btn{padding:7px 10px;font-size:11px}
+.searchbar{display:flex;gap:6px;margin:7px 0;flex:0 0 auto}.searchbar input{flex:1;min-width:0;border:1px solid var(--line);background:rgba(255,253,248,.72);border-radius:10px;padding:7px 10px;outline:none;font-size:12px}
+.filter-panel{display:none;border:1px solid var(--line);background:rgba(255,253,248,.8);border-radius:13px;padding:10px;margin-bottom:7px;max-height:165px;overflow:auto;flex:0 0 auto}.filter-panel.open{display:block}.filter-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.filter-head strong{font-size:12px}.filter-head button{border:0;background:transparent;color:var(--muted)}.card-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.list-card{border:1px solid #ded5c9;border-left:3px solid #cfc4b5;border-radius:10px;background:var(--paper);padding:9px;text-align:left;min-width:0}.list-card.reviewed{border-left-color:var(--ink)}.list-front{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.list-back{font-size:10px;color:#8d8478;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.list-tag{font-size:9px;color:#968d81;margin-top:5px}
+.study-zone{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}.paper{position:relative;width:min(900px,91%);height:min(48vh,390px);min-height:245px;cursor:pointer;filter:drop-shadow(0 20px 28px rgba(65,54,40,.15))}.face{position:absolute;inset:0;border:1px solid #d4cabc;border-radius:10px;background:var(--paper);display:flex;align-items:center;justify-content:center;text-align:center;padding:45px;overflow:hidden;transition:opacity .16s,transform .16s}.face:before{content:"";position:absolute;inset:0;opacity:.25;background:repeating-linear-gradient(0deg,transparent 0 5px,#d8d0c4 5px 6px),repeating-linear-gradient(90deg,transparent 0 8px,#e7e0d6 8px 9px)}.face:after{content:"";position:absolute;inset:11px;border:1px solid rgba(130,115,95,.15)}.face.back{opacity:0;transform:scale(.985);pointer-events:none;background:var(--paper2)}.paper.show-back .front{opacity:0;transform:scale(.985);pointer-events:none}.paper.show-back .back{opacity:1;transform:scale(1);pointer-events:auto}.corner{position:absolute;top:17px;left:22px;z-index:2;font-size:9px;letter-spacing:.16em;color:#a39a8e}.paper-pos{position:absolute;right:22px;top:17px;z-index:2;font-size:10px;color:#a39a8e}.paper-hint{position:absolute;bottom:17px;z-index:2;font-size:10px;color:#aaa196}.paper-front{position:relative;z-index:2;font:clamp(30px,4vw,43px)/1.3 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}.paper-back{position:relative;z-index:2;font:clamp(18px,2.4vw,24px)/1.65 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}
+.nav-arrows{position:absolute;left:1%;right:1%;top:50%;transform:translateY(-50%);display:flex;justify-content:space-between;pointer-events:none}.arrow{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,253,248,.82);color:#615a52;font-size:23px}
+.bottom-actions{flex:0 0 auto;text-align:center}.review-row,.paper-actions{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}.review-row .btn{min-width:92px}.review-row .active{background:var(--ink);color:#fff;border-color:var(--ink)}.review-info{font-size:10px;color:#9a9185;margin:4px 0}.add-entry{text-align:center;flex:0 0 auto;margin-top:5px}.add-entry button{border:1px solid var(--line);background:var(--surface);color:#5c554d;border-radius:10px;padding:6px 13px;font-size:11px}
+.empty{color:#aaa196;font-size:12px;text-align:center;line-height:1.7}
+
+/* Fullscreen modals/pages */
+.overlay{position:fixed;inset:0;background:rgba(38,34,29,.38);z-index:80;display:none;align-items:center;justify-content:center;padding:18px}.overlay.open{display:flex}
+.dialog{width:min(470px,100%);max-height:88vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 25px 60px rgba(0,0,0,.18)}.dialog h3{margin:0 0 13px;font:700 21px Georgia,"Songti SC",serif}.dialog label{display:block;font-size:11px;color:#81786c;margin:10px 0 5px}.dialog input,.dialog textarea{width:100%;border:1px solid var(--line);background:#fffdf9;border-radius:10px;padding:10px;outline:none}.dialog textarea{min-height:90px;resize:vertical}.dialog-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:14px}.dialog-actions button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 13px}.dialog-actions .ok{background:var(--ink);color:#fff;border-color:var(--ink)}
+.add-page{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;overflow:hidden}.add-page.open{display:flex}.add-inner{width:min(1050px,100%);height:100%;margin:auto;padding:22px 28px;display:flex;flex-direction:column;overflow:hidden}.add-header{display:flex;justify-content:space-between;align-items:flex-start;flex:0 0 auto}.add-title{font:700 28px Georgia,"Songti SC",serif}.add-folder{font-size:11px;color:var(--muted);margin-top:4px}.add-sheet{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.add-col{min-height:0;display:flex;flex-direction:column}.add-label{font-size:11px;color:#81786c;margin:0 0 7px 3px}.add-box{flex:1;min-height:0;width:100%;border:1px solid #d4cabc;border-radius:12px;background:var(--paper);padding:24px;outline:none;resize:none;box-shadow:var(--shadow);font:22px/1.6 Georgia,"Songti SC",serif}.add-box.back-box{background:var(--paper2);font-size:18px}.add-footer{display:flex;justify-content:center;gap:7px;margin-top:15px;flex:0 0 auto}
+
+/* Study session */
+.session{position:fixed;inset:0;background:var(--bg);z-index:110;display:none;flex-direction:column;padding:18px 24px}.session.open{display:flex}.session-head{display:flex;justify-content:space-between;align-items:center}.session-title{font:700 22px Georgia,"Songti SC",serif}.session-count{font-size:11px;color:var(--muted)}.session-progress{height:5px;background:#ddd5c9;border-radius:99px;margin:12px 0}.session-progress i{display:block;height:100%;width:0;background:var(--ink);border-radius:99px}.session-card-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}.session-card{width:min(900px,90%);height:min(60vh,480px);min-height:270px}.session-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.session-buttons .btn{min-width:105px}.session-buttons .btn:nth-child(1){border-color:#c8877f;color:#934f48}.session-buttons .btn:nth-child(2){border-color:#d3a46d;color:#8a5c2b}.session-buttons .btn:nth-child(3){border-color:#86a995;color:#3e7251}.session-buttons .btn:nth-child(4){border-color:#687f9c;color:#304d6d}.session-hint{text-align:center;font-size:10px;color:#a0988c;margin-top:7px}
+
+/* responsive */
+@media(max-width:850px){
+ .app{padding:10px 13px}.shell{grid-template-columns:190px 1fr;gap:13px}.sidebar{padding-right:10px}.brand-cn{font-size:29px}
+ .card-list{grid-template-columns:repeat(2,minmax(0,1fr))}.paper{width:94%}
+}
+@media(max-width:700px){
+ html,body{overflow:hidden!important}.app{padding:8px 10px}.topbar{height:40px}.brand-cn{font-size:27px}
+ .shell{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:7px}.sidebar{border-right:0;border-bottom:1px solid rgba(150,135,115,.2);padding:0 0 7px}
+ .space-title,.hint{display:none}.home-nav{margin:0 0 6px;padding:8px}.section-title{margin-bottom:3px}.folder-list{flex-direction:row;overflow-x:auto}.folder{min-width:135px;padding:8px}.folder-add{padding:7px;margin-top:4px}
+ .home-card{padding:15px}.dashboard{grid-template-columns:1fr;margin-top:8px}.dash-panel:nth-child(2){display:none}.home-title{font-size:23px}
+ .folder-title{font-size:22px}.folder-head{gap:7px}.stats{margin-top:5px}.stats .stat{padding:6px 8px}
+ .toolbar .btn{padding:6px 8px}.searchbar{margin:5px 0}
+ .study-zone{min-height:0}.paper{height:min(51vw,300px);min-height:215px;width:97%}.face{padding:32px}.corner{top:13px;left:16px}.paper-pos{top:13px;right:16px}.paper-hint{bottom:13px}
+ .arrow{width:34px;height:34px}.nav-arrows{left:-1%;right:-1%}.review-row .btn{min-width:0;padding:7px 10px}
+ .add-inner{padding:15px 13px}.add-sheet{grid-template-columns:1fr;gap:10px;margin-top:12px}.add-box{min-height:150px}.add-col{flex:1}.add-box.back-box{min-height:160px}
+ .session{padding:12px}.session-card{width:96%;height:min(55vw,330px);min-height:230px}
+}
+
+/* Filter/list open state: fold the study card away cleanly */
+#folderPage:has(.filter-panel.open) .study-zone{
+  flex:0 0 0 !important;
+  min-height:0 !important;
+  height:0 !important;
+  overflow:hidden !important;
+  margin:0 !important;
+}
+#folderPage:has(.filter-panel.open) .bottom-actions,
+#folderPage:has(.filter-panel.open) .add-entry,
+#folderPage:has(.filter-panel.open) .notice{
+  display:none !important;
+}
+#folderPage:has(.filter-panel.open) .filter-panel{
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none;
+  overflow:auto;
+  margin-bottom:7px;
+}
+#folderPage:has(.filter-panel.open) .card-list{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+@media(max-width:850px){
+ #folderPage:has(.filter-panel.open) .card-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ #folderPage:has(.filter-panel.open) .card-list{grid-template-columns:1fr}
+}
+
+
+/* ===== v2 product polish ===== */
+.folder{position:relative;padding-left:16px}
+.folder-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--folder-accent,#8c8378);vertical-align:1px}
+.folder.active .folder-dot{box-shadow:0 0 0 2px rgba(255,255,255,.15)}
+.folder-select{display:none;width:100%;border:1px solid var(--line);background:var(--surface);color:#554f48;border-radius:10px;padding:9px 10px;margin-bottom:7px;outline:none}
+.more-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.more-grid .btn{text-align:left}
+.review-row .btn:nth-child(1){border-color:#c8877f;color:#934f48;background:#fbefed}
+.review-row .btn:nth-child(2){border-color:#d3a46d;color:#8a5c2b;background:#fbf3e7}
+.review-row .btn:nth-child(3){border-color:#86a995;color:#3e7251;background:#eff7f1}
+.review-row .btn:nth-child(4){border-color:#687f9c;color:#304d6d;background:#edf2f7}
+.review-row .btn:hover{filter:brightness(.98)}
+.stamp-wrap{display:flex;align-items:center;gap:12px;margin-top:16px}
+.stamp{width:64px;height:64px;border:2px solid #a79a89;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;font:700 11px/1.2 Georgia,"Songti SC",serif;color:#8e8170;transform:rotate(-7deg);background:rgba(248,243,234,.75)}
+.stamp.done{border-color:#292724;color:#292724;box-shadow:inset 0 0 0 3px rgba(41,39,36,.08)}
+.check-copy{font-size:11px;color:#8c8378}.check-copy b{display:block;color:#514a42;font-size:13px;margin-bottom:3px}
+.due-badge{display:inline-block;margin-left:5px;font-size:9px;padding:2px 5px;border-radius:99px;background:#f2e7db;color:#8b5d43}
+.list-tag .due-badge{margin-left:3px}
+#filterPanel.open{animation:fadeIn .14s ease}@keyframes fadeIn{from{opacity:.5;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media(max-width:700px){
+ .folder-list{display:none}.folder-select{display:block}
+ .dashboard{overflow:auto;grid-template-columns:1fr;display:block}
+ .dash-panel{margin-bottom:9px}.dash-panel:nth-child(2){display:block}
+ .home-page{overflow:auto}
+ .home-page .dashboard{padding-bottom:10px}
+ .stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .mini-stat{padding:9px 7px}.mini-stat b{font-size:18px}
+}
+
+
+.add-tabs{display:flex;gap:5px;margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:7px;flex:0 0 auto}
+.add-tab{border:1px solid transparent;background:transparent;color:#756d63;border-radius:9px;padding:8px 13px;font-size:12px}
+.add-tab.active{background:var(--ink);color:#fff}
+.add-mode{display:none;flex:1;min-height:0;flex-direction:column}
+.add-mode.active{display:flex}
+.import-help{display:flex;justify-content:space-between;gap:15px;align-items:center;margin:16px 2px 8px;font-size:11px;color:var(--muted)}
+.batch-box{flex:1;min-height:0;width:100%;resize:none;border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:18px;outline:none;font:15px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:var(--shadow)}
+.import-preview{margin-top:8px;max-height:115px;overflow:auto;font-size:10px;color:#8e857a;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
+.image-import{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.image-drop{width:min(650px,100%);min-height:210px;border:1px dashed #b9ad9e;border-radius:16px;background:rgba(255,253,248,.62);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+.image-icon{font-size:35px;color:#82786d}
+.image-drop strong{font:700 19px Georgia,"Songti SC",serif}.image-drop span{font-size:11px;color:var(--muted)}
+.ocr-status{margin-top:12px;font-size:11px;color:#8c8377;text-align:center}
+.ocr-preview{width:min(750px,100%);max-height:210px;overflow:auto;margin-top:10px}
+.ocr-row{display:grid;grid-template-columns:1fr 1fr 35px;gap:6px;margin-bottom:6px}
+.ocr-row input{border:1px solid var(--line);border-radius:8px;padding:7px;background:var(--paper)}
+.ocr-row button{border:1px solid var(--line);background:var(--surface);border-radius:8px}
+.ocr-actions{display:flex;gap:7px;margin-top:10px}
+@media(max-width:700px){.add-tabs{overflow-x:auto}.import-help{display:block}.image-drop{min-height:170px}.ocr-row{grid-template-columns:1fr 1fr 32px}}
+
+.toast{position:fixed;z-index:200;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;pointer-events:none;max-width:calc(100% - 32px);padding:10px 14px;border-radius:12px;background:rgba(41,39,36,.94);color:#fff;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,.2);transition:opacity .2s,transform .2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar"><div class="brand"><span class="brand-cn">纸卡</span><span class="brand-en">PAPER CARDS</span></div><div class="top-actions"><span class="sync-state" id="syncState">本地模式</span><button class="btn account-btn" id="accountBtn">登录同步</button><button class="btn install-btn" id="installApp">安装应用</button><span class="top-total" id="topTotal"></span></div></header>
+
+<div class="shell">
+<aside class="sidebar">
+ <div class="space-title">纸卡空间</div>
+ <button class="home-nav active" id="homeNav">⌂ 今日打卡</button>
+ <div class="section-title">我的文件夹 <button class="icon-btn" id="newFolder">＋</button></div>
+ <div class="folder-list" id="folders"></div>
+ <select class="folder-select" id="folderSelect" aria-label="选择文件夹"></select>
+ <button class="folder-add" id="newFolder2">＋ 添加文件夹</button>
+ <div class="hint">长按文件夹可删除 · 电脑端右键可删除</div>
+</aside>
+
+<main class="main">
+<!-- HOME PAGE -->
+<section class="page active" id="homePage">
+ <div class="home-card">
+  <div class="home-row">
+   <div><div class="eyebrow">TODAY</div><div class="home-title">今日学习</div><div class="home-desc">记录今天的学习足迹，慢慢把每天变成习惯。</div></div>
+   <div class="home-actions"><button class="btn" id="checkIn">打开打卡</button><button class="btn" id="openCalendar">已打卡 0 天</button></div>
+  </div>
+  <div class="stamp-wrap"><div class="stamp" id="stamp">DAILY<br>STUDY</div><div class="check-copy"><b id="checkText">今天还没有打卡</b><span id="checkSub">完成一次学习后可以盖章。</span></div></div>
+ </div>
+ <div class="dashboard">
+  <div class="dash-panel">
+   <div class="dash-heading"><strong id="monthTitle"></strong><span><button class="month-nav" id="monthPrev">‹</button><button class="month-nav" id="monthNext">›</button></span></div>
+   <div class="calendar-grid" id="calendar"></div>
+   <div class="home-tip" id="calendarSummary"></div>
+  </div>
+  <div class="dash-panel">
+   <div class="dash-heading"><strong>学习概览</strong><span>本地数据</span></div>
+   <div class="stats-grid">
+    <div class="mini-stat"><b id="streak">0</b><span>连续打卡天数</span></div>
+    <div class="mini-stat"><b id="bestStreak">0</b><span>最长连续天数</span></div>
+    <div class="mini-stat"><b id="cardTotal">0</b><span>全部纸卡</span></div>
+    <div class="mini-stat"><b id="cardReviewed">0</b><span>已复习</span></div>
+    <div class="mini-stat"><b id="cardDue">0</b><span>今日待复习</span></div>
+   </div>
+   <div class="home-tip">提示：进入文件夹后，你可以用「不会 / 模糊 / 会了 / 很熟」记录掌握程度。</div>
+  </div>
+ </div>
+</section>
+
+<!-- FOLDER PAGE -->
+<section class="page" id="folderPage">
+ <div class="folder-head">
+  <div><div class="folder-title" id="folderName"></div><div class="folder-sub">一个文件夹可以放很多张纸卡，一起学习。</div></div>
+  <div class="head-right">
+   <div class="stats">
+    <button class="stat active" data-filter="all"><b id="allNum">0</b>全部</button>
+    <button class="stat" data-filter="reviewed"><b id="reviewedNum">0</b>已复习</button>
+    <button class="stat" data-filter="unreviewed"><b id="unreviewedNum">0</b>未复习</button>
+   </div>
+   <button class="btn" id="renameFolder">✎</button>
+   <button class="btn" id="moreFolder">•••</button>
+  </div>
+ </div>
+ <div class="progress"><i id="progress"></i></div>
+ <div class="toolbar">
+  <button class="btn dark" id="studyAll">▶ 学习全部</button>
+  <button class="btn" id="studyUnreviewed">学习未复习</button>
+  <button class="btn" id="studyDue">今日待复习</button>
+  <button class="btn" id="moreActions">••• 更多</button>
+ </div>
+ <div class="searchbar"><input id="search" placeholder="搜索当前文件夹的正面或背面……"><button class="btn" id="searchBtn">搜索</button></div>
+ <div class="filter-panel" id="filterPanel"><div class="filter-head"><strong id="filterTitle">全部内容</strong><button id="closeFilter">关闭 ×</button></div><div class="card-list" id="cardList"></div></div>
+ <div class="study-zone" id="studyZone">
+  <div class="paper" id="paper">
+   <div class="face front"><span class="corner">FRONT · 正面</span><span class="paper-pos" id="paperPos"></span><div class="paper-front" id="paperFront"></div><span class="paper-hint">点击纸卡查看背面</span></div>
+   <div class="face back"><span class="corner">BACK · 背面</span><span class="paper-pos" id="paperPosBack"></span><div class="paper-back" id="paperBack"></div><span class="paper-hint">点击纸卡返回正面</span></div>
+  </div>
+  <div class="nav-arrows"><button class="arrow" id="prev">‹</button><button class="arrow" id="next">›</button></div>
+ </div>
+ <div class="bottom-actions">
+  <div class="review-row"><button class="btn" id="rateAgain">○ 不会</button><button class="btn" id="rateHard">◐ 模糊</button><button class="btn" id="rateGood">● 会了</button><button class="btn" id="rateEasy">☆ 很熟</button></div>
+  <div class="review-info" id="reviewInfo"></div>
+ </div>
+ <div class="add-entry"><button id="openAdd">＋ 添加纸卡</button></div>
+ <div class="notice">点击纸卡翻面 · Space 翻面 · ← → 切换 · 数据保存在本机浏览器</div>
+</section>
+</main>
+</div>
+</div>
+
+<!-- ADD PAGE -->
+<div class="add-page" id="addPage">
+ <div class="add-inner">
+  <div class="add-header">
+   <div><div class="add-title">添加纸卡</div><div class="add-folder" id="addFolderName"></div></div>
+   <button class="btn" id="closeAdd">× 关闭</button>
+  </div>
+
+  <div class="add-tabs">
+   <button class="add-tab active" data-addmode="single">单张添加</button>
+   <button class="add-tab" data-addmode="batch">批量导入</button>
+   <button class="add-tab" data-addmode="image">图片识别</button>
+  </div>
+
+  <section class="add-mode active" id="addSingle">
+   <div class="add-sheet">
+    <div class="add-col"><div class="add-label">正面 · 问题 / 单词 / 知识点</div><textarea class="add-box" id="addFront" placeholder="例如：grocer"></textarea></div>
+    <div class="add-col"><div class="add-label">背面 · 答案 / 解释 / 公式</div><textarea class="add-box back-box" id="addBack" placeholder="例如：食品杂货商"></textarea></div>
+   </div>
+   <div class="add-footer"><button class="btn" id="clearAdd">清空</button><button class="btn" id="swapSingle">⇄ 调换正反面</button><button class="btn dark" id="saveAdd">保存纸卡</button></div>
+  </section>
+
+  <section class="add-mode" id="addBatch">
+   <div class="import-help">
+    <strong>批量导入</strong>
+    <span>每行一张卡；支持 Tab、逗号、连续空格。可调换前后顺序。</span>
+   </div>
+   <textarea class="batch-box" id="batchText" placeholder="grocer	食品杂货商
+influence	影响
+vary	变化
+sustain	维持"></textarea>
+   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;font-size:13px">
+      <label>分隔符 <select id="batchDelimiter"><option value="auto">自动识别</option><option value="tab">Tab</option><option value="comma">逗号</option><option value="space">连续空格</option></select></label>
+      <label>卡片方向 <select id="batchDirection"><option value="normal">前者 → 正面，后者 → 背面</option><option value="reverse">前者 → 背面，后者 → 正面</option></select></label>
+     </div>
+     <div class="import-preview" id="batchPreview">等待输入……</div>
+   <div class="add-footer"><button class="btn" id="clearBatch">清空</button><button class="btn" id="swapBatch">⇄ 调换正反面</button><button class="btn dark" id="saveBatch">导入纸卡</button></div>
+  </section>
+
+  <section class="add-mode" id="addImage">
+   <div class="image-import">
+    <div class="image-drop" id="imageDrop">
+     <div class="image-icon">▧</div>
+     <strong>选择图片进行文字识别</strong>
+     <span>支持教材、单词表、笔记等清晰图片</span>
+     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+       <button class="btn dark" id="scanImage">📷 扫图</button>
+       <button class="btn" id="chooseImage">🖼 截图 / 相册</button>
+     </div>
+     <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#756d63">
+       <label>识别速度 <select id="ocrMode"><option value="fast" selected>快速（推荐）</option><option value="precise">精确（慢）</option></select></label>
+       <label>文字语言 <select id="ocrLanguage"><option value="chi_sim+eng" selected>中英混合</option><option value="chi_sim">仅中文</option><option value="eng">仅英文（最快）</option></select></label>
+     </div>
+     <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+     <input type="file" id="imageInput" accept="image/*" multiple hidden>
+    </div>
+    <div class="ocr-status" id="ocrStatus">基础模式：文字在你的设备本地识别，不调用 AI API。</div>
+    <div class="ocr-preview" id="ocrPreview"></div>
+    <div class="ocr-actions" id="ocrActions" style="display:none">
+      <button class="btn" id="clearOcr">重新选择</button>
+      <button class="btn" id="swapOcr">⇄ 调换正反面</button>
+      <button class="btn dark" id="importOcr">将识别结果导入为纸卡</button>
+    </div>
+   </div>
+  </section>
+ </div>
+</div>
+<!-- DIALOG -->
+<div class="overlay" id="dialogOverlay"><div class="dialog" id="dialog"></div></div>
+
+<!-- STUDY SESSION -->
+<div class="session" id="session">
+ <div class="session-head"><div class="session-title" id="sessionTitle"></div><div class="session-count" id="sessionCount"></div><button class="btn" id="closeSession">结束学习</button></div>
+ <div class="session-progress"><i id="sessionProgress"></i></div>
+ <div class="session-card-wrap">
+  <div class="paper session-card" id="sessionPaper">
+   <div class="face front"><span class="corner">FRONT · 正面</span><span class="paper-pos" id="sessionPos"></span><div class="paper-front" id="sessionFront"></div><span class="paper-hint">点击纸卡翻面</span></div>
+   <div class="face back"><span class="corner">BACK · 背面</span><span class="paper-pos" id="sessionPosBack"></span><div class="paper-back" id="sessionBack"></div><span class="paper-hint">点击返回正面</span></div>
+  </div>
+ </div>
+ <div class="session-buttons"><button class="btn" data-rate="again">○ 不会</button><button class="btn" data-rate="hard">◐ 模糊</button><button class="btn" data-rate="good">● 会了</button><button class="btn" data-rate="easy">☆ 很熟</button></div>
+ <div class="session-hint">先自己回忆，再翻面选择掌握程度</div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(()=>{"use strict";
+const KEY="paper_cards_ultimate_v1", CHECK="paper_cards_checkin_v1", CLOUD_META="paper_cards_cloud_meta_v1";
+const seed={folders:[
+ {id:"english",name:"英语 · 高频词",color:"#3f7f7b",cards:[
+  {front:"grocer",back:"食品杂货商；食品杂货店老板",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"influence",back:"影响；对……产生影响",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"vary",back:"变化；各地区差异很大",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"sustain",back:"维持；保持；使持续",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"subtle",back:"微妙的；不易察觉的",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null}]},
+ {id:"math",name:"数学分析",color:"#74639a",cards:[
+  {front:"可微",back:"函数在一点附近可以用线性函数很好地近似。",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"连续",back:"函数值在一点附近的变化可以任意小。",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null},
+  {front:"偏导数",back:"固定其他变量，只考察函数对一个变量的变化率。",reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null}]}
+]};
+let data=loadData(),checkins=loadCheckins(),folderId=null,cardIndex=0,isBack=false,filter="all",filtered=null,calendarDate=new Date(),session=null,pressTimer=null,pressTriggered=false;
+const CLOUD=window.PAPER_CARDS_CLOUD||{};
+let cloud=null,cloudUser=null,syncTimer=null;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let toastTimer=null,deferredInstall=null;
+function toast(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
+function setSyncState(message){$("syncState").textContent=message}
+function cloudConfigured(){return /^https:\/\//.test(String(CLOUD.url||""))&&String(CLOUD.anonKey||"").length>20}
+function updateAccountButton(){
+ $("accountBtn").textContent=cloudUser?"账号":"登录同步";
+ if(!cloudConfigured())setSyncState("本地模式")
+ else if(cloudUser)setSyncState("已同步");else setSyncState("未登录")
+}
+async function initCloud(){
+ if(!cloudConfigured()){updateAccountButton();return}
+ try{
+  const {createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+  cloud=createClient(CLOUD.url,CLOUD.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  const {data:sessionData}=await cloud.auth.getSession();cloudUser=sessionData.session?.user||null;updateAccountButton();
+  if(cloudUser)await pullCloudData(false);
+  cloud.auth.onAuthStateChange((_event,sessionData)=>{cloudUser=sessionData?.user||null;updateAccountButton()});
+ }catch(e){setSyncState("同步不可用");console.warn("Cloud initialization failed",e)}
+}
+function scheduleCloudSync(){
+ if(!cloud||!cloudUser)return;clearTimeout(syncTimer);syncTimer=setTimeout(pushCloudData,900)
+}
+async function pushCloudData(){
+ if(!cloud||!cloudUser||!navigator.onLine)return;
+ setSyncState("正在同步");
+ const updatedAt=new Date().toISOString();
+ const {error}=await cloud.from("paper_cards_profiles").upsert({id:cloudUser.id,data,checkins,updated_at:updatedAt},{onConflict:"id"});
+ if(error){setSyncState("同步失败");console.warn("Cloud save failed",error);return}
+ localStorage.setItem(CLOUD_META,updatedAt);setSyncState("已同步")
+}
+async function pullCloudData(askBeforeOverwrite=true){
+ if(!cloud||!cloudUser)return;
+ setSyncState("正在同步");
+ const {data:row,error}=await cloud.from("paper_cards_profiles").select("data,checkins,updated_at").eq("id",cloudUser.id).maybeSingle();
+ if(error){setSyncState("同步失败");console.warn("Cloud load failed",error);return}
+ if(!row){await pushCloudData();return}
+ const localUpdated=localStorage.getItem(CLOUD_META);
+ const remoteIsNewer=!localUpdated||new Date(row.updated_at).getTime()>new Date(localUpdated).getTime();
+ if(remoteIsNewer&&askBeforeOverwrite&&!confirm("云端已有较新的纸卡数据。确定下载并覆盖这台设备的本地数据吗？\n选择“取消”将保留本机数据并上传到云端。")){await pushCloudData();return}
+ if(row.data?.folders&&Array.isArray(row.data.folders)){data=loadImportedData(row.data);checkins=Array.isArray(row.checkins)?row.checkins.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)):[];localStorage.setItem(KEY,JSON.stringify(data));persistCheckins();localStorage.setItem(CLOUD_META,row.updated_at||new Date().toISOString());showHome();toast("已下载云端数据")}
+ setSyncState("已同步")
+}
+function openAccountDialog(){
+ if(!cloudConfigured()){
+  $("dialog").innerHTML='<h3>启用账号同步</h3><p style="font-size:13px;line-height:1.7;color:#625a52">同步服务尚未配置。请按 README 创建 Supabase 项目，并填写 <code>cloud-config.js</code> 中的 URL 和匿名密钥。</p><div class="dialog-actions"><button class="ok" data-close>知道了</button></div>';
+  $("dialogOverlay").classList.add("open");document.querySelector("[data-close]").onclick=()=>$('dialogOverlay').classList.remove('open');return
+ }
+ if(cloudUser){
+  $("dialog").innerHTML=`<h3>账号与同步</h3><p style="font-size:13px;line-height:1.7;color:#625a52">已登录：<b>${esc(cloudUser.email||"")}</b></p><div class="dialog-actions" style="justify-content:space-between"><button class="btn danger" id="logoutBtn">退出登录</button><span><button data-close>关闭</button><button class="ok" id="syncNowBtn">立即同步</button></span></div>`;
+  $("dialogOverlay").classList.add("open");$("syncNowBtn").onclick=async()=>{await pushCloudData();$("dialogOverlay").classList.remove("open");toast("同步完成")};$("logoutBtn").onclick=async()=>{await cloud.auth.signOut();cloudUser=null;updateAccountButton();$("dialogOverlay").classList.remove("open");toast("已退出登录")};document.querySelector("[data-close]").onclick=()=>$('dialogOverlay').classList.remove('open');return
+ }
+ $("dialog").innerHTML='<h3>登录以同步纸卡</h3><label>邮箱</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"><label>密码</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="至少 6 位"><p style="font-size:11px;color:#91887c;line-height:1.6">注册后，纸卡会加密传输并按账号隔离；请勿使用公共设备保存登录状态。</p><div class="dialog-actions"><button data-close>取消</button><button id="authSignup">注册</button><button class="ok" id="authLogin">登录</button></div>';
+ $("dialogOverlay").classList.add("open");
+ const auth=async(mode)=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||password.length<6){toast("请输入邮箱和至少 6 位密码");return}const result=mode==="login"?await cloud.auth.signInWithPassword({email,password}):await cloud.auth.signUp({email,password});if(result.error){toast("操作失败："+result.error.message);return}if(mode==="signup"&&!result.data.session){toast("注册成功，请到邮箱完成验证后再登录");return}cloudUser=result.data.user;updateAccountButton();$("dialogOverlay").classList.remove("open");await pullCloudData(true);toast("登录成功，正在同步")};
+ $("authLogin").onclick=()=>auth("login");$("authSignup").onclick=()=>auth("signup");document.querySelector("[data-close]").onclick=()=>$('dialogOverlay').classList.remove('open')
+}
+function loadData(){
+ try{
+  const x=JSON.parse(localStorage.getItem(KEY));
+  if(x&&Array.isArray(x.folders)&&x.folders.length){
+   x.folders.forEach((f,fi)=>{f.color=f.color||["#3f7f7b","#74639a","#a26a54","#55799b","#7b8060"][fi%5];f.cards=(f.cards||[]).map(c=>({...c,reviewCount:c.reviewCount||0,interval:Number(c.interval)||0,dueAt:c.dueAt||null,rating:c.rating||""}))});
+   return x
+  }
+ }catch(e){}
+ return structuredClone(seed)
+}
+function persist(){
+  const payload=JSON.stringify(data);
+  try{localStorage.setItem(KEY,payload);scheduleCloudSync();return true}catch(e){
+    try{sessionStorage.setItem(KEY,payload);scheduleCloudSync();return true}catch(e2){return false}
+  }
+}
+function loadCheckins(){try{const x=JSON.parse(localStorage.getItem(CHECK)||"[]");return Array.isArray(x)?x:[]}catch(e){return[]}}
+function persistCheckins(){localStorage.setItem(CHECK,JSON.stringify(checkins));scheduleCloudSync()}
+function todayKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function currentFolder(){return folderId===null?null:data.folders.find(f=>f.id===folderId)}
+function allIndices(){const f=currentFolder();return f?f.cards.map((_,i)=>i):[]}
+function visibleIndices(){
+ const f=currentFolder();if(!f)return[];
+ let a=f.cards.map((_,i)=>i);
+ if(filter==="reviewed")a=a.filter(i=>f.cards[i].reviewed);
+ if(filter==="unreviewed")a=a.filter(i=>!f.cards[i].reviewed);
+ if(filtered!==null)a=a.filter(i=>filtered.includes(i));
+ return a;
+}
+function totalCards(){return data.folders.reduce((n,f)=>n+f.cards.length,0)}
+function reviewedCards(){return data.folders.reduce((n,f)=>n+f.cards.filter(c=>c.reviewed).length,0)}
+
+function dueNow(c){return !c.dueAt||new Date(c.dueAt).getTime()<=Date.now()}
+function dueCards(f){return f?f.cards.filter(c=>dueNow(c)&&(!c.reviewed||c.dueAt)):[]}
+function formatDue(c){
+ if(!c.dueAt)return "待复习";
+ const ms=new Date(c.dueAt).getTime()-Date.now();
+ if(ms<=0)return "现在";
+ const min=Math.ceil(ms/60000);if(min<60)return `${min} 分钟后`;
+ const h=Math.ceil(min/60);if(h<24)return `${h} 小时后`;
+ return `${Math.ceil(h/24)} 天后`;
+}
+function applyRating(c,r){
+ const now=Date.now(),prev=Math.max(0,Number(c.interval)||0);
+ const minutes = r==="again"?1:r==="hard"?10:null;
+ if(minutes)c.interval=Math.max(0,Math.round(minutes/1440*1000)/1000);
+ else if(r==="good")c.interval=Math.max(1,prev?Math.round(prev*2):1);
+ else if(r==="easy")c.interval=Math.max(4,prev?Math.round(prev*4):4);
+ c.rating=r;c.reviewed=r!=="again";c.reviewCount=(c.reviewCount||0)+1;c.lastReviewed=new Date(now).toISOString();
+ c.dueAt=new Date(now+(c.interval||0)*86400000).toISOString();
+}
+
+function renderFolders(){
+ $("folders").innerHTML=data.folders.map(f=>`<button class="folder ${f.id===folderId?"active":""}" style="--folder-accent:${f.color||"#8c8378"}" data-id="${esc(f.id)}"><span class="folder-dot"></span>${esc(f.name)} <span class="count">${f.cards.length}</span></button>`).join("");
+ $("folderSelect").innerHTML=`<option value="">选择文件夹</option>`+data.folders.map(f=>`<option value="${esc(f.id)}">${esc(f.name)} · ${f.cards.length} 张</option>`).join("");
+ $("folderSelect").value=folderId||"";
+ $("topTotal").textContent=`${data.folders.length} 个文件夹 · ${totalCards()} 张纸卡`;
+}
+function showHome(){
+ folderId=null;filtered=null;filter="all";isBack=false;
+ $("homePage").classList.add("active");$("folderPage").classList.remove("active");
+ $("homeNav").classList.add("active");
+ renderFolders();renderHome();
+}
+function showFolder(id){
+ const f=data.folders.find(x=>x.id===id);if(!f)return;
+ folderId=id;cardIndex=0;filtered=null;filter="all";isBack=false;
+ $("homePage").classList.remove("active");$("folderPage").classList.add("active");
+ $("homeNav").classList.remove("active");
+ renderFolders();renderFolder();
+}
+function renderHome(){
+ $("homeNav").classList.toggle("active",folderId===null);
+ const set=new Set(checkins),k=todayKey(),on=set.has(k);
+ $("checkIn").textContent=on?"✓ 已打卡":"打开打卡";$("checkIn").classList.toggle("dark",on);
+ $("checkDot")?.classList.toggle("on",on);
+ $("checkText").textContent=on?"今天已打卡，继续保持。":"今天还没有打卡";
+ $("checkSub").textContent=on?"今日学习印记已经留下。":"完成一次学习后可以盖章。";
+ $("stamp").classList.toggle("done",on);$("stamp").innerHTML=on?"✓<br>已打卡":"DAILY<br>STUDY";
+ $("openCalendar").textContent=`已打卡 ${set.size} 天`;
+ $("cardTotal").textContent=totalCards();$("cardReviewed").textContent=reviewedCards();
+ $("cardDue").textContent=data.folders.reduce((n,f)=>n+dueCards(f).length,0);
+ const s=streaks();$("streak").textContent=s.current;$("bestStreak").textContent=s.best;
+ renderCalendar();
+}
+function streaks(){
+ const days=[...new Set(checkins)].sort();if(!days.length)return{current:0,best:0};
+ let best=1,run=1;
+ for(let i=1;i<days.length;i++){const a=new Date(days[i-1]+"T00:00:00"),b=new Date(days[i]+"T00:00:00");if((b-a)/86400000===1)run++;else run=1;best=Math.max(best,run)}
+ let cur=0,d=new Date();if(!new Set(days).has(todayKey(d))){d.setDate(d.getDate()-1)}
+ while(new Set(days).has(todayKey(d))){cur++;d.setDate(d.getDate()-1)}
+ return{current:cur,best:Math.max(best,cur)}
+}
+function renderCalendar(){
+ const y=calendarDate.getFullYear(),m=calendarDate.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),set=new Set(checkins),today=todayKey();
+ $("monthTitle").textContent=`${y} 年 ${m+1} 月`;
+ let out=["日","一","二","三","四","五","六"].map(x=>`<div class="weekday">${x}</div>`).join("");
+ for(let i=0;i<first;i++)out+='<div class="day empty"></div>';
+ for(let d=1;d<=days;d++){const k=todayKey(new Date(y,m,d));out+=`<div class="day ${set.has(k)?"checked":""} ${k===today?"today":""}">${d}</div>`}
+ $("calendar").innerHTML=out;
+ $("calendarSummary").textContent=`累计打卡 ${set.size} 天 · 连续打卡 ${streaks().current} 天`;
+}
+
+function renderFolder(){
+ const f=currentFolder();if(!f)return;
+ $("folderName").textContent=f.name;
+ const r=f.cards.filter(c=>c.reviewed).length;
+ $("allNum").textContent=f.cards.length;$("reviewedNum").textContent=r;$("unreviewedNum").textContent=f.cards.length-r;
+ $("progress").style.width=(f.cards.length?r/f.cards.length*100:0)+"%";
+ const list=visibleIndices();
+ if(!list.length){renderEmpty();return}
+ if(!list.includes(cardIndex))cardIndex=list[0];
+ const c=f.cards[cardIndex];
+ $("paperFront").textContent=c.front;$("paperBack").textContent=c.back;
+ const pos=list.indexOf(cardIndex)+1, total=list.length;
+ $("paperPos").textContent=`${pos} / ${total}`;$("paperPosBack").textContent=`${pos} / ${total}`;
+ $("paper").classList.toggle("show-back",isBack);
+ $("reviewInfo").textContent=`${c.reviewed?"✓ 已复习":"○ 未复习"} · ${c.reviewCount||0} 次复习 · ${formatDue(c)}${c.lastReviewed?" · 上次 "+new Date(c.lastReviewed).toLocaleDateString("zh-CN"):""}`;
+ document.querySelectorAll("[data-filter]").forEach(b=>b.classList.toggle("active",b.dataset.filter===filter));
+}
+function renderEmpty(){
+ $("paperFront").textContent="";$("paperBack").textContent="";
+ $("paperPos").textContent="";$("paperPosBack").textContent="";
+ $("reviewInfo").textContent="这个文件夹还没有符合条件的纸卡";
+ $("paper").classList.remove("show-back");
+}
+function flipPaper(){isBack=!isBack;$("paper").classList.toggle("show-back",isBack)}
+function move(delta){
+ const list=visibleIndices();if(!list.length)return;
+ let p=list.indexOf(cardIndex);p=(p+delta+list.length)%list.length;cardIndex=list[p];isBack=false;renderFolder()
+}
+function rate(r){
+ const f=currentFolder();if(!f||!f.cards[cardIndex])return;
+ const c=f.cards[cardIndex];applyRating(c,r);
+ persist();markToday();move(1);
+}
+function markToday(){const k=todayKey();if(!checkins.includes(k)){checkins.push(k);checkins.sort();persistCheckins()}}
+function startSession(mode,random=false){
+ const f=currentFolder();if(!f)return;
+ let ids=f.cards.map((_,i)=>i);
+ if(mode==="reviewed")ids=ids.filter(i=>f.cards[i].reviewed);
+ if(mode==="unreviewed")ids=ids.filter(i=>!f.cards[i].reviewed);
+ if(mode==="due")ids=ids.filter(i=>dueNow(f.cards[i]));
+ if(random)ids.sort(()=>Math.random()-.5);
+ if(!ids.length){alert(mode==="unreviewed"?"没有未复习的纸卡。":mode==="due"?"今天没有到期的纸卡。":"没有可学习的纸卡。");return}
+ session={ids,pos:0};$("sessionTitle").textContent=f.name;$("session").classList.add("open");renderSession()
+}
+function renderSession(){
+ const f=currentFolder(),ids=session.ids,c=f.cards[ids[session.pos]],p=session.pos+1;
+ $("sessionCount").textContent=`${p} / ${ids.length}`;$("sessionProgress").style.width=p/ids.length*100+"%";
+ $("sessionFront").textContent=c.front;$("sessionBack").textContent=c.back;$("sessionPos").textContent=`${p} / ${ids.length}`;$("sessionPosBack").textContent=`${p} / ${ids.length}`;
+ $("sessionPaper").classList.remove("show-back");
+}
+function sessionFlip(){ $("sessionPaper").classList.toggle("show-back") }
+function sessionRate(r){
+ const f=currentFolder(),c=f.cards[session.ids[session.pos]];applyRating(c,r);persist();markToday();
+ if(session.pos>=session.ids.length-1){$("session").classList.remove("open");renderFolder();renderHome();alert("这一轮学习完成！")}else{session.pos++;renderSession()}
+}
+function openFilter(mode){
+ filter=mode;filtered=null;$("filterTitle").textContent={all:"全部内容",reviewed:"已复习内容",unreviewed:"未复习内容"}[mode]||"内容";
+ const ids=visibleIndices();
+ $("cardList").innerHTML=ids.length?ids.map(i=>{const c=currentFolder().cards[i];return `<button class="list-card ${c.reviewed?"reviewed":""}" data-card="${i}"><div class="list-front">${esc(c.front)}</div><div class="list-back">${esc(c.back)}</div><div class="list-tag">${c.reviewed?"✓ 已复习":"○ 未复习"}${c.reviewed?`<span class="due-badge">${esc(formatDue(c))}</span>`:""}</div></button>`}).join(""):'<div class="empty">暂无内容</div>';
+ $("filterPanel").classList.add("open");renderFolder()
+}
+function doSearch(){
+ const q=$("search").value.trim().toLowerCase();
+ filtered=q?currentFolder().cards.map((c,i)=>(c.front+" "+c.back).toLowerCase().includes(q)?i:-1).filter(i=>i>=0):null;
+ $("filterTitle").textContent=q?`搜索结果 · ${filtered.length} 张`:"全部内容";
+ const ids=visibleIndices();
+ $("cardList").innerHTML=ids.length?ids.map(i=>{const c=currentFolder().cards[i];return `<button class="list-card ${c.reviewed?"reviewed":""}" data-card="${i}"><div class="list-front">${esc(c.front)}</div><div class="list-back">${esc(c.back)}</div><div class="list-tag">${c.reviewed?"✓ 已复习":"○ 未复习"}${c.reviewed?`<span class="due-badge">${esc(formatDue(c))}</span>`:""}</div></button>`}).join(""):'<div class="empty">没有找到相关纸卡</div>';
+ $("filterPanel").classList.add("open");
+}
+function openDialog(type){
+ const f=currentFolder();
+ if(type==="folder"){
+  $("dialog").innerHTML=`<h3>新建文件夹</h3><input id="dlgName" placeholder="例如：六级词汇、数学分析"><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgSave">创建</button></div>`;
+  $("dlgSave").onclick=()=>{const n=$("dlgName").value.trim();if(!n)return;const id="f"+Date.now();const colors=["#3f7f7b","#74639a","#a26a54","#55799b","#7b8060"];data.folders.push({id,name:n,color:colors[data.folders.length%colors.length],cards:[]});persist();$("dialogOverlay").classList.remove("open");showFolder(id)}
+ }else if(type==="rename"){
+  if(!f)return;
+  $("dialog").innerHTML=`<h3>重命名文件夹</h3><input id="dlgName" value="${esc(f.name)}"><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgSave">保存</button></div>`;
+  $("dlgSave").onclick=()=>{const n=$("dlgName").value.trim();if(!n)return;f.name=n;persist();$("dialogOverlay").classList.remove("open");renderFolders();renderFolder()}
+ }else if(type==="edit"){
+  if(!f||!f.cards[cardIndex])return;const c=f.cards[cardIndex];
+  $("dialog").innerHTML=`<h3>编辑纸卡</h3><label>正面</label><input id="dlgFront" value="${esc(c.front)}"><label>背面</label><textarea id="dlgBack">${esc(c.back)}</textarea><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgSave">保存修改</button></div>`;
+  $("dlgSave").onclick=()=>{const a=$("dlgFront").value.trim(),b=$("dlgBack").value.trim();if(!a||!b)return;c.front=a;c.back=b;persist();$("dialogOverlay").classList.remove("open");renderFolder()}
+ }else if(type==="deleteFolder"){
+  if(data.folders.length<=1){alert("至少保留一个文件夹。");return}
+  $("dialog").innerHTML=`<h3>删除文件夹</h3><p style="font-size:13px;line-height:1.7;color:#625a52">确定删除「<b>${esc(f.name)}</b>」吗？<br>里面的 ${f.cards.length} 张纸卡也会一起删除。</p><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgSave">删除</button></div>`;
+  $("dlgSave").onclick=()=>{data.folders=data.folders.filter(x=>x.id!==folderId);persist();$("dialogOverlay").classList.remove("open");showHome()}
+ }
+ $("dialogOverlay").classList.add("open");
+ document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$("dialogOverlay").classList.remove("open"));
+}
+
+function openBatch(){
+ if(!currentFolder()){alert("请先选择一个文件夹。");return}
+ switchAddMode("batch");
+ $("batchText").value="";
+ parseBatch();
+ $("addPage").classList.add("open");
+ setTimeout(()=>$("batchText").focus(),50);
+}
+function previewBatch(){
+ const rows=$("batchText").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const good=rows.filter(x=>x.split("\t").length>=2&&x.split("\t")[0].trim()&&x.split("\t").slice(1).join("\t").trim());
+ $("batchPreview").textContent=`识别到 ${good.length} 张纸卡${rows.length!==good.length?` · ${rows.length-good.length} 行格式有误`:""}`;
+}
+function saveBatch(){
+ const rows=parseBatch();
+ if(!rows.length){alert("没有识别到有效内容，请检查每行是否有两个部分，并确认分隔符设置正确。");return}
+ const f=currentFolder();
+ if(!f){alert("请先选择一个文件夹。");return}
+ f.cards.push(...rows.map(x=>({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:x.front,back:x.back,reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null})));
+ cardIndex=f.cards.length-rows.length;
+ const ok=persist(); renderFolder();renderFolders();renderHome();
+ if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请使用 Safari/Chrome 正常打开 HTML 文件。");
+}
+function openMore(){
+ $("dialog").innerHTML=`<h3>更多操作</h3><div class="more-grid">
+ <button class="btn" id="moreRandom">↝ 随机学习</button>
+ <button class="btn" id="moreBatch">⇥ 批量导入</button>
+ <button class="btn" id="moreEdit">✎ 编辑当前卡</button>
+ <button class="btn" id="moreExport">⇩ 导出备份</button>
+ <button class="btn danger" id="moreDelete">删除当前卡</button>
+ <button class="btn" id="moreDeleteFolder">删除文件夹</button>
+ </div>`;
+ $("dialogOverlay").classList.add("open");
+ $("moreRandom").onclick=()=>{$("dialogOverlay").classList.remove("open");startSession("all",true)};
+ $("moreBatch").onclick=()=>{$("dialogOverlay").classList.remove("open");openBatch()};
+ $("moreEdit").onclick=()=>{$("dialogOverlay").classList.remove("open");openDialog("edit")};
+ $("moreExport").onclick=()=>{exportData();$("dialogOverlay").classList.remove("open")};
+ $("moreDelete").onclick=()=>{$("dialogOverlay").classList.remove("open");openDialog("deleteCard")};
+ $("moreDeleteFolder").onclick=()=>{$("dialogOverlay").classList.remove("open");openDialog("deleteFolder")};
+}
+
+function deleteCurrentCard(){
+ const f=currentFolder(),c=f?.cards[cardIndex];if(!c)return;
+ $("dialog").innerHTML=`<h3>删除纸卡</h3><p style="font-size:13px;line-height:1.7;color:#625a52">确定删除这张纸卡吗？<br><b>「${esc(c.front)}」</b><br><span style="font-size:11px;color:#9a9185">${esc(c.back)}</span></p><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgDeleteCard">删除</button></div>`;
+ $("dialogOverlay").classList.add("open");
+ $("dlgDeleteCard").onclick=()=>{f.cards.splice(cardIndex,1);if(cardIndex>=f.cards.length)cardIndex=Math.max(0,f.cards.length-1);persist();$("dialogOverlay").classList.remove("open");renderFolder();renderFolders();renderHome()};
+ document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$("dialogOverlay").classList.remove("open"));
+}
+function openAdd(){if(!currentFolder()){alert("请先选择一个文件夹。");return}$("addFolderName").textContent=`添加到：${currentFolder().name}`;$("addFront").value="";$("addBack").value="";$("batchText").value="";resetOcr();switchAddMode("single");$("addPage").classList.add("open");setTimeout(()=>$("addFront").focus(),50)}
+function saveAdd(){
+ const a=$("addFront").value.trim(),b=$("addBack").value.trim();
+ if(!a||!b){alert("正面和背面都要填写。");return}
+ const f=currentFolder();if(!f){alert("请先选择一个文件夹。");return}
+ f.cards.push({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:a,back:b,reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null});
+ cardIndex=f.cards.length-1;
+ const ok=persist();renderFolder();renderFolders();renderHome();
+ if(ok) $("addPage").classList.remove("open");
+ else alert("保存失败：当前浏览器没有允许本地存储。请用 Safari/Chrome 打开下载后的 HTML 文件，而不是在应用内预览。");
+}
+async function exportData(){
+ const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data,checkins},null,2)],{type:"application/json"}),fileName="纸卡备份.json";
+ const file=typeof File!=="undefined"?new File([blob],fileName,{type:"application/json"}):null;
+ if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
+  try{await navigator.share({title:"纸卡备份",text:"我的纸卡学习数据备份",files:[file]});toast("备份已打开系统分享");return}catch(e){if(e?.name==="AbortError")return}
+ }
+ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("备份文件已下载")
+}
+function importData(){
+ const input=document.createElement("input");input.type="file";input.accept=".json,application/json";input.onchange=async()=>{const file=input.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(!x.data?.folders||!Array.isArray(x.data.folders))throw Error();data=x.data;checkins=Array.isArray(x.checkins)?x.checkins.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)):[];data=loadImportedData(data);persist();persistCheckins();showHome();toast("导入成功") }catch(e){alert("文件格式不正确，无法导入。")}};input.click()
+}
+function loadImportedData(input){
+ const colors=["#3f7f7b","#74639a","#a26a54","#55799b","#7b8060"];
+ return {folders:input.folders.map((f,fi)=>({id:String(f.id||("f"+Date.now()+fi)),name:String(f.name||"未命名文件夹").slice(0,100),color:f.color||colors[fi%colors.length],cards:Array.isArray(f.cards)?f.cards.filter(c=>c&&String(c.front||"").trim()&&String(c.back||"").trim()).map((c,ci)=>({id:String(c.id||("c"+Date.now()+fi+ci)),front:String(c.front).slice(0,10000),back:String(c.back).slice(0,10000),reviewed:!!c.reviewed,rating:c.rating||"",reviewCount:Number(c.reviewCount)||0,lastReviewed:c.lastReviewed||null,interval:Number(c.interval)||0,dueAt:c.dueAt||null})):[]}))}
+}
+
+
+/* Add-card modes */
+function switchAddMode(mode){
+ document.querySelectorAll(".add-tab").forEach(b=>b.classList.toggle("active",b.dataset.addmode===mode));
+ document.querySelectorAll(".add-mode").forEach(x=>x.classList.remove("active"));
+ $("add"+({single:"Single",batch:"Batch",image:"Image"}[mode])).classList.add("active");
+}
+document.querySelectorAll(".add-tab").forEach(b=>b.onclick=()=>switchAddMode(b.dataset.addmode));
+function splitImportLine(line, mode){
+ line=String(line||"").trim(); if(!line)return null;
+ let parts=[];
+ if(mode==="tab") parts=line.split(/\t+/);
+ else if(mode==="comma") parts=line.split(/\s*,\s*/);
+ else if(mode==="space") parts=line.split(/\s{2,}/);
+ else {
+   if(/\t/.test(line)) parts=line.split(/\t+/);
+   else if(/\s*,\s*/.test(line)) parts=line.split(/\s*,\s*/);
+   else if(/\s{2,}/.test(line)) parts=line.split(/\s{2,}/);
+   else if(/\s+[—–-]\s+/.test(line)) parts=line.split(/\s+[—–-]\s+/);
+   else if(/\s*[:：]\s*/.test(line)) parts=line.split(/\s*[:：]\s*/);
+   else parts=[];
+ }
+ if(parts.length<2)return null;
+ const left=String(parts.shift()||"").trim();
+ const right=String(parts.join(mode==="comma"?",":" ")||"").trim();
+ if(!left||!right)return null;
+ return {left,right};
+}
+function parseBatch(){
+ const mode=$("batchDelimiter")?.value||"auto",direction=$("batchDirection")?.value||"normal";
+ const lines=$("batchText").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const parsed=lines.map(x=>splitImportLine(x,mode)).filter(Boolean);
+ const rows=parsed.map(x=>direction==="reverse"?{front:x.right,back:x.left}:{front:x.left,back:x.right});
+ const bad=lines.length-parsed.length;
+ $("batchPreview").textContent=rows.length?`已识别 ${rows.length} 张纸卡${bad?` · ${bad} 行未能自动拆分`:""}：\n`+rows.slice(0,8).map(x=>`${x.front}  →  ${x.back}`).join("\n")+(rows.length>8?"\n……":""):(lines.length?`暂未识别成功：${lines.length} 行。请在“分隔符”中手动选择。`:"等待输入……");
+ return rows;
+}
+function swapBatchDirection(){
+ const el=$("batchDirection");el.value=el.value==="normal"?"reverse":"normal";parseBatch();
+}
+$("batchText").addEventListener("input",parseBatch);
+$("batchDelimiter")?.addEventListener("change",parseBatch);
+$("batchDirection")?.addEventListener("change",parseBatch);
+$("clearBatch").onclick=()=>{$("batchText").value="";parseBatch()};
+$("swapBatch").onclick=swapBatchDirection;
+$("saveBatch").onclick=()=>{
+ const rows=parseBatch();
+ if(!rows.length){alert("没有识别到有效内容。请检查每行是否有两个部分，必要时手动选择分隔符。");return}
+ const f=currentFolder();if(!f){alert("请先选择一个文件夹。");return}
+ f.cards.push(...rows.map(x=>({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:x.front,back:x.back,reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null})));
+ cardIndex=f.cards.length-rows.length;
+ const ok=persist();renderFolder();renderFolders();renderHome();
+ if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 正常打开 HTML 文件。");
+};
+
+/* Image OCR: local Tesseract first, with clearer loading/error handling and preprocessing. */
+let ocrCards=[],ocrWorker=null,ocrWorkerLanguage="";
+function resetOcr(){ocrCards=[];$("ocrPreview").innerHTML="";$("ocrActions").style.display="none";$("ocrStatus").textContent="快速模式：缩小图片并跳过旋转检测，适合正向清晰图片。首次使用需要下载 OCR 组件。"}
+$("scanImage").onclick=()=>$("cameraInput").click();
+$("chooseImage").onclick=()=>$("imageInput").click();
+$("imageDrop").onclick=e=>{if(!e.target.closest("button"))$("imageInput").click()};
+async function ensureTesseract(){
+ if(window.Tesseract)return true;
+ const urls=["https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js","https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"];
+ for(const url of urls){
+  try{await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=url;s.onload=()=>resolve();s.onerror=()=>reject();document.head.appendChild(s)});if(window.Tesseract)return true}catch(e){}
+ }
+ throw new Error("OCR 组件加载失败。请确认 Safari/Chrome 可以联网后再试");
+}
+async function preprocessImage(file,mode){
+ return await new Promise(resolve=>{
+  const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{
+   const max=mode==="fast"?1280:2200,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+   const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+   const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");
+   ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+   if(mode==="fast"){URL.revokeObjectURL(url);c.toBlob(b=>resolve(b||file),"image/jpeg",.86);return}
+   const d=ctx.getImageData(0,0,w,h),p=d.data;
+   for(let i=0;i<p.length;i+=4){const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];const v=g>185?255:g<90?0:g; p[i]=p[i+1]=p[i+2]=v}
+   ctx.putImageData(d,0,0);URL.revokeObjectURL(url);c.toBlob(b=>resolve(b||file),"image/png");
+  };img.onerror=()=>{URL.revokeObjectURL(url);resolve(file)};img.src=url;
+ });
+}
+async function recognizeImages(files){
+ if(!files.length)return;
+ const mode=$("ocrMode").value,language=$("ocrLanguage").value;
+ $("ocrStatus").textContent=`已选择 ${files.length} 张图片，正在加载 OCR 组件……`;
+ try{await ensureTesseract()}catch(e){$("ocrStatus").textContent=e.message;return}
+ let texts=[];
+ try{
+  if(!ocrWorker||ocrWorkerLanguage!==language){
+   if(ocrWorker)await ocrWorker.terminate();
+   ocrWorker=await Tesseract.createWorker(language,1,{
+    workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+    corePath:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js",
+    langPath:"https://tessdata.projectnaptha.com/4.0.0",
+    logger:m=>{if(m.status==="loading language traineddata")$("ocrStatus").textContent=`正在下载识别语言包 ${Math.round((m.progress||0)*100)}%……`}
+   });
+   ocrWorkerLanguage=language;
+  }
+  for(let i=0;i<files.length;i++){
+   $("ocrStatus").textContent=`正在${mode==="fast"?"快速":"精确"}识别第 ${i+1}/${files.length} 张图片……`;
+   const img=await preprocessImage(files[i],mode);
+   const r=await ocrWorker.recognize(img,{rotateAuto:mode==="precise"});
+   texts.push(r?.data?.text||"");
+  }
+ }catch(e){
+  ocrWorker=null;
+  $("ocrStatus").textContent=`OCR 失败：${e?.message||"组件或网络加载失败"}。请检查网络后重试。`;
+  return;
+ }
+ const lines=texts.join("\n").split(/\r?\n/).map(x=>x.replace(/\s+$/g,"").trim()).filter(Boolean);
+ ocrCards=lines.map(line=>splitImportLine(line,"auto")).filter(Boolean).map(x=>({front:x.left,back:x.right}));
+ if(!ocrCards.length)ocrCards=lines.map(x=>({front:x,back:""}));
+ renderOcr();
+}
+$("imageInput").onchange=()=>recognizeImages([...$("imageInput").files]);
+$("cameraInput").onchange=()=>recognizeImages([...$("cameraInput").files]);
+function renderOcr(){
+ $("ocrStatus").textContent=ocrCards.length?`识别完成：${ocrCards.length} 行。请检查、调整正反面后再导入。`:"识别完成，但没有检测到文字。建议拍清晰、正对纸面、光线均匀的图片。";
+ $("ocrPreview").innerHTML=ocrCards.map((x,i)=>`<div class="ocr-row"><input data-ocr-front="${i}" value="${esc(x.front)}" placeholder="正面"><input data-ocr-back="${i}" value="${esc(x.back)}" placeholder="背面"><button data-ocr-del="${i}">×</button></div>`).join("");
+ $("ocrActions").style.display=ocrCards.length?"flex":"none";
+}
+$("ocrPreview").oninput=e=>{const f=e.target.dataset.ocrFront,b=e.target.dataset.ocrBack;if(f!==undefined)ocrCards[Number(f)].front=e.target.value;if(b!==undefined)ocrCards[Number(b)].back=e.target.value};
+$("ocrPreview").onclick=e=>{const b=e.target.closest("[data-ocr-del]");if(b){ocrCards.splice(Number(b.dataset.ocrDel),1);renderOcr()}};
+$("swapOcr").onclick=()=>{ocrCards=ocrCards.map(x=>({front:x.back,back:x.front}));renderOcr()};
+$("clearOcr").onclick=()=>{$("imageInput").value="";$("cameraInput").value="";resetOcr()};
+$("importOcr").onclick=()=>{
+ const rows=ocrCards.filter(x=>x.front.trim()&&x.back.trim());if(!rows.length){alert("请先补全至少一张纸卡的正面和背面。");return}
+ const f=currentFolder();if(!f){alert("请先选择一个文件夹。");return}
+ f.cards.push(...rows.map(x=>({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:x.front.trim(),back:x.back.trim(),reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null})));
+ cardIndex=f.cards.length-rows.length;const ok=persist();renderFolder();renderFolders();renderHome();
+ if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 打开下载后的 HTML。");
+};
+
+/* Navigation */
+$("accountBtn").onclick=openAccountDialog;
+$("homeNav").onclick=showHome;
+$("folderSelect").onchange=e=>{if(e.target.value)showFolder(e.target.value)};
+$("folders").onclick=e=>{const b=e.target.closest("[data-id]");if(b)showFolder(b.dataset.id)};
+$("folders").onpointerdown=e=>{const b=e.target.closest("[data-id]");if(!b)return;pressTriggered=false;pressTimer=setTimeout(()=>{pressTriggered=true;folderId=b.dataset.id;openDialog("deleteFolder")},650)};
+["pointerup","pointercancel","pointerleave"].forEach(t=>$("folders").addEventListener(t,()=>clearTimeout(pressTimer)));
+$("folders").oncontextmenu=e=>{const b=e.target.closest("[data-id]");if(b){e.preventDefault();folderId=b.dataset.id;openDialog("deleteFolder")}};
+$("newFolder").onclick=()=>openDialog("folder");$("newFolder2").onclick=()=>openDialog("folder");
+$("renameFolder").onclick=()=>openDialog("rename");
+$("moreFolder").onclick=()=>{const f=currentFolder();if(!f)return;$("dialog").innerHTML=`<h3>文件夹工具</h3><div style="display:grid;gap:8px"><button class="btn" id="exportBtn">导出全部数据</button><button class="btn" id="importBtn">导入备份</button><button class="btn danger" id="delFolderBtn">删除「${esc(f.name)}」</button></div>`;$("dialogOverlay").classList.add("open");$("exportBtn").onclick=exportData;$("importBtn").onclick=importData;$("delFolderBtn").onclick=()=>{ $("dialogOverlay").classList.remove("open");openDialog("deleteFolder") }};
+$("dialogOverlay").onclick=e=>{if(e.target===$("dialogOverlay"))$("dialogOverlay").classList.remove("open")};
+
+/* Home */
+$("checkIn").onclick=()=>{const k=todayKey();if(!checkins.includes(k)){checkins.push(k);checkins.sort();persistCheckins()}renderHome()};
+$("openCalendar").onclick=()=>{renderCalendar();$("calendar").animate?.([{opacity:.45},{opacity:1}],{duration:180})};
+$("monthPrev").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()};
+$("monthNext").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()};
+
+/* Folder */
+document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>openFilter(b.dataset.filter));
+$("closeFilter").onclick=()=>{$("filterPanel").classList.remove("open");filtered=null;renderFolder()};
+$("cardList").onclick=e=>{const b=e.target.closest("[data-card]");if(!b)return;cardIndex=Number(b.dataset.card);isBack=false;$("filterPanel").classList.remove("open");filtered=null;renderFolder()};
+$("searchBtn").onclick=doSearch;$("search").onkeydown=e=>{if(e.key==="Enter")doSearch()};
+$("paper").onclick=flipPaper;$("prev").onclick=()=>move(-1);$("next").onclick=()=>move(1);
+$("rateAgain").onclick=()=>rate("again");$("rateHard").onclick=()=>rate("hard");$("rateGood").onclick=()=>rate("good");$("rateEasy").onclick=()=>rate("easy");
+$("studyAll").onclick=()=>startSession("all");$("studyUnreviewed").onclick=()=>startSession("unreviewed");$("studyDue").onclick=()=>startSession("due");
+$("moreActions").onclick=openMore;
+$("openAdd").onclick=openAdd;$("closeAdd").onclick=()=>$("addPage").classList.remove("open");
+$("clearBatch").onclick=()=>{$("batchText").value="";parseBatch()};$("batchText").oninput=parseBatch;$("saveBatch").onclick=saveBatch;$("clearAdd").onclick=()=>{$("addFront").value="";$("addBack").value="";$("addFront").focus()};$("saveAdd").onclick=saveAdd;
+
+$("swapSingle").onclick=()=>{const a=$("addFront").value,b=$("addBack").value;$("addFront").value=b;$("addBack").value=a};
+
+/* Session */
+$("sessionPaper").onclick=sessionFlip;$("closeSession").onclick=()=>$("session").classList.remove("open");
+document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>sessionRate(b.dataset.rate));
+
+/* Keyboard + touch safety */
+document.addEventListener("keydown",e=>{
+ if(e.target.matches("input,textarea"))return;
+ if(e.code==="Space"){e.preventDefault();if($("session").classList.contains("open"))sessionFlip();else if(folderId!==null)flipPaper()}
+ else if(e.key==="ArrowLeft"&&folderId!==null&&!$("session").classList.contains("open"))move(-1);
+ else if(e.key==="ArrowRight"&&folderId!==null&&!$("session").classList.contains("open"))move(1);
+ else if(["1","2","3","4"].includes(e.key)){
+  const r={1:"again",2:"hard",3:"good",4:"easy"}[e.key];
+  if($("session").classList.contains("open"))sessionRate(r);
+  else if(folderId!==null)rate(r);
+ }
+ else if(e.key==="Escape"){document.querySelectorAll(".overlay.open,.add-page.open,.session.open").forEach(x=>x.classList.remove("open"))}
+});
+document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+
+/* Installable app + offline shell. iOS shows installation from Safari's Share menu. */
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("installApp").style.display="inline-block"});
+$("installApp").onclick=async()=>{
+ if(!deferredInstall){toast("iPhone/iPad：请在 Safari 的“分享”菜单选择“添加到主屏幕”");return}
+ deferredInstall.prompt();const result=await deferredInstall.userChoice;deferredInstall=null;$("installApp").style.display="none";toast(result.outcome==="accepted"?"应用正在安装":"已取消安装")
+};
+window.addEventListener("appinstalled",()=>{deferredInstall=null;$("installApp").style.display="none";toast("纸卡已安装到设备")});
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}
+window.addEventListener("online",()=>{if(cloudUser){toast("网络已恢复，正在同步");scheduleCloudSync()}});
+
+renderFolders();renderHome();initCloud();
+})();
+</script>
+</body>
+</html>

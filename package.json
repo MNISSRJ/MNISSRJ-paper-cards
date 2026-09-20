@@ -1,0 +1,19 @@
+{
+  "name": "paper-cards-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "纸卡 PWA 与 Android/iOS 原生打包配置",
+  "scripts": {
+    "android:add": "npx cap add android",
+    "ios:add": "npx cap add ios",
+    "sync:native": "npx cap sync",
+    "android:open": "npx cap open android",
+    "ios:open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  }
+}
