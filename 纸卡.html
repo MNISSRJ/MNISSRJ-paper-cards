@@ -1027,41 +1027,157 @@ $("saveBatch").onclick=()=>{
  if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 正常打开 HTML 文件。");
 };
 
-/* Image OCR: local Tesseract first, with clearer loading/error handling and preprocessing. */
+/* Image OCR: local Tesseract + layout-aware card pairing. */
 let ocrCards=[],ocrWorker=null,ocrWorkerLanguage="";
-function resetOcr(){ocrCards=[];$("ocrPreview").innerHTML="";$("ocrActions").style.display="none";$("ocrStatus").textContent="快速模式：缩小图片并跳过旋转检测，适合正向清晰图片。首次使用需要下载 OCR 组件。"}
+function resetOcr(){
+ ocrCards=[];
+ $("ocrPreview").innerHTML="";
+ $("ocrActions").style.display="none";
+ $("ocrStatus").textContent="快速模式：识别文字后会按图片排版自动配对正反面，并合并换行内容。首次使用需要下载 OCR 组件。";
+}
 $("scanImage").onclick=()=>$("cameraInput").click();
 $("chooseImage").onclick=()=>$("imageInput").click();
 $("imageDrop").onclick=e=>{if(!e.target.closest("button"))$("imageInput").click()};
+
 async function ensureTesseract(){
  if(window.Tesseract)return true;
  const urls=["https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js","https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"];
  for(const url of urls){
-  try{await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=url;s.onload=()=>resolve();s.onerror=()=>reject();document.head.appendChild(s)});if(window.Tesseract)return true}catch(e){}
+  try{
+   await new Promise((resolve,reject)=>{
+    const s=document.createElement("script");s.src=url;s.onload=()=>resolve();s.onerror=()=>reject();document.head.appendChild(s);
+   });
+   if(window.Tesseract)return true;
+  }catch(e){}
  }
  throw new Error("OCR 组件加载失败。请确认 Safari/Chrome 可以联网后再试");
 }
+
 async function preprocessImage(file,mode){
  return await new Promise(resolve=>{
   const img=new Image(),url=URL.createObjectURL(file);
   img.onload=()=>{
-   const max=mode==="fast"?1280:2200,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+   const max=mode==="fast"?1800:2600;
+   const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
    const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
-   const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");
+   const c=document.createElement("canvas");c.width=w;c.height=h;
+   const ctx=c.getContext("2d");
    ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
-   if(mode==="fast"){URL.revokeObjectURL(url);c.toBlob(b=>resolve(b||file),"image/jpeg",.86);return}
+   if(mode==="fast"){
+    URL.revokeObjectURL(url);
+    c.toBlob(b=>resolve(b||file),"image/jpeg",.9);
+    return;
+   }
    const d=ctx.getImageData(0,0,w,h),p=d.data;
-   for(let i=0;i<p.length;i+=4){const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];const v=g>185?255:g<90?0:g; p[i]=p[i+1]=p[i+2]=v}
-   ctx.putImageData(d,0,0);URL.revokeObjectURL(url);c.toBlob(b=>resolve(b||file),"image/png");
-  };img.onerror=()=>{URL.revokeObjectURL(url);resolve(file)};img.src=url;
+   for(let i=0;i<p.length;i+=4){
+    const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+    const v=g>190?255:g<85?0:g;
+    p[i]=p[i+1]=p[i+2]=v;
+   }
+   ctx.putImageData(d,0,0);URL.revokeObjectURL(url);
+   c.toBlob(b=>resolve(b||file),"image/png");
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);resolve(file)};
+  img.src=url;
  });
 }
+
+function cleanOcrText(s){
+ return String(s||"")
+  .replace(/[\u0000-\u001f]/g," ")
+  .replace(/[|¦]/g," ")
+  .replace(/\s+/g," ")
+  .trim();
+}
+
+function flattenOcrLines(blocks){
+ const lines=[];
+ (blocks||[]).forEach(block=>{
+  (block.paragraphs||[]).forEach(par=>{
+   (par.lines||[]).forEach(line=>{
+    const words=(line.words||[])
+      .filter(w=>cleanOcrText(w.text))
+      .map(w=>({text:cleanOcrText(w.text),bbox:w.bbox||{x0:0,y0:0,x1:0,y1:0},confidence:Number(w.confidence)||0}))
+      .filter(w=>w.text);
+    const text=cleanOcrText(line.text||words.map(w=>w.text).join(" "));
+    if(text)lines.push({text,words,bbox:line.bbox||null});
+   });
+  });
+ });
+ return lines.sort((a,b)=>(a.bbox?.y0||0)-(b.bbox?.y0||0));
+}
+
+function median(nums){
+ const a=nums.filter(Number.isFinite).slice().sort((x,y)=>x-y);
+ if(!a.length)return 0;
+ return a[Math.floor(a.length/2)];
+}
+
+function splitVisualOcrLine(line){
+ const words=line.words.slice().sort((a,b)=>(a.bbox.x0||0)-(b.bbox.x0||0));
+ if(words.length<2)return {left:"",right:line.text,split:false};
+
+ const heights=words.map(w=>Math.max(1,(w.bbox.y1||0)-(w.bbox.y0||0)));
+ const gaps=[];
+ for(let i=0;i<words.length-1;i++){
+  gaps.push({
+   i,
+   gap:(words[i+1].bbox.x0||0)-(words[i].bbox.x1||0)
+  });
+ }
+ if(!gaps.length)return {left:"",right:line.text,split:false};
+ const biggest=gaps.reduce((a,b)=>b.gap>a.gap?b:a,gaps[0]);
+ const threshold=Math.max(22,median(heights)*1.15);
+
+ if(biggest.gap>=threshold){
+  const left=cleanOcrText(words.slice(0,biggest.i+1).map(w=>w.text).join(""));
+  const right=cleanOcrText(words.slice(biggest.i+1).map(w=>w.text).join(" "));
+  if(left&&right)return {left,right,split:true};
+ }
+ return {left:"",right:cleanOcrText(words.map(w=>w.text).join(" ")),split:false};
+}
+
+function smartPairOcr(blocks,rawText){
+ const lines=flattenOcrLines(blocks);
+ if(!lines.length){
+  const fallback=String(rawText||"").split(/\r?\n/).map(x=>cleanOcrText(x)).filter(Boolean);
+  return fallback.map(x=>({front:"",back:x}));
+ }
+
+ const visual=lines.map((line,i)=>{
+  const p=splitVisualOcrLine(line);
+  return {
+   ...p,
+   y:(line.bbox?.y0||line.words[0]?.bbox?.y0||0),
+   h:Math.max(1,(line.bbox?.y1||0)-(line.bbox?.y0||0)),
+   order:i
+  };
+ }).filter(x=>x.left||x.right);
+
+ const rows=[];
+ for(const row of visual){
+  const prev=rows[rows.length-1];
+  const closeEnough=prev&&row.y-(prev.y+prev.h)<=Math.max(prev.h,row.h)*0.9;
+  if(!row.left&&prev&&prev.left&&closeEnough){
+   prev.right=cleanOcrText(prev.right+" "+row.right);
+   prev.h=Math.max(prev.h,row.y+row.h-prev.y);
+   continue;
+  }
+  rows.push({left:row.left,right:row.right,y:row.y,h:row.h});
+ }
+
+ return rows
+  .map(r=>({front:cleanOcrText(r.left),back:cleanOcrText(r.right)}))
+  .filter(r=>r.front||r.back);
+}
+
 async function recognizeImages(files){
  if(!files.length)return;
  const mode=$("ocrMode").value,language=$("ocrLanguage").value;
  $("ocrStatus").textContent=`已选择 ${files.length} 张图片，正在加载 OCR 组件……`;
  try{await ensureTesseract()}catch(e){$("ocrStatus").textContent=e.message;return}
- let texts=[];
+
+ const results=[];
  try{
   if(!ocrWorker||ocrWorkerLanguage!==language){
    if(ocrWorker)await ocrWorker.terminate();
@@ -1069,43 +1185,65 @@ async function recognizeImages(files){
     workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
     corePath:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js",
     langPath:"https://tessdata.projectnaptha.com/4.0.0",
-    logger:m=>{if(m.status==="loading language traineddata")$("ocrStatus").textContent=`正在下载识别语言包 ${Math.round((m.progress||0)*100)}%……`}
+    logger:m=>{
+     if(m.status==="loading language traineddata")
+      $("ocrStatus").textContent=`正在下载识别语言包 ${Math.round((m.progress||0)*100)}%……`;
+    }
    });
    ocrWorkerLanguage=language;
   }
+
   for(let i=0;i<files.length;i++){
    $("ocrStatus").textContent=`正在${mode==="fast"?"快速":"精确"}识别第 ${i+1}/${files.length} 张图片……`;
    const img=await preprocessImage(files[i],mode);
-   const r=await ocrWorker.recognize(img,{rotateAuto:mode==="precise"});
-   texts.push(r?.data?.text||"");
+   const r=await ocrWorker.recognize(img,{rotateAuto:mode==="precise"},{blocks:true});
+   results.push(r);
   }
  }catch(e){
   ocrWorker=null;
   $("ocrStatus").textContent=`OCR 失败：${e?.message||"组件或网络加载失败"}。请检查网络后重试。`;
   return;
  }
- const lines=texts.join("\n").split(/\r?\n/).map(x=>x.replace(/\s+$/g,"").trim()).filter(Boolean);
- ocrCards=lines.map(line=>splitImportLine(line,"auto")).filter(Boolean).map(x=>({front:x.left,back:x.right}));
- if(!ocrCards.length)ocrCards=lines.map(x=>({front:x,back:""}));
+
+ ocrCards=[];
+ results.forEach(r=>{
+  ocrCards.push(...smartPairOcr(r?.data?.blocks||[],r?.data?.text||""));
+ });
+ if(!ocrCards.length){
+  $("ocrStatus").textContent="识别完成，但没有检测到文字。建议拍清晰、正对纸面、光线均匀的图片。";
+ }else{
+  $("ocrStatus").textContent=`识别完成：${ocrCards.length} 张候选纸卡。已自动合并换行内容，请检查后再导入。`;
+ }
  renderOcr();
 }
+
 $("imageInput").onchange=()=>recognizeImages([...$("imageInput").files]);
 $("cameraInput").onchange=()=>recognizeImages([...$("cameraInput").files]);
+
 function renderOcr(){
- $("ocrStatus").textContent=ocrCards.length?`识别完成：${ocrCards.length} 行。请检查、调整正反面后再导入。`:"识别完成，但没有检测到文字。建议拍清晰、正对纸面、光线均匀的图片。";
  $("ocrPreview").innerHTML=ocrCards.map((x,i)=>`<div class="ocr-row"><input data-ocr-front="${i}" value="${esc(x.front)}" placeholder="正面"><input data-ocr-back="${i}" value="${esc(x.back)}" placeholder="背面"><button data-ocr-del="${i}">×</button></div>`).join("");
  $("ocrActions").style.display=ocrCards.length?"flex":"none";
 }
-$("ocrPreview").oninput=e=>{const f=e.target.dataset.ocrFront,b=e.target.dataset.ocrBack;if(f!==undefined)ocrCards[Number(f)].front=e.target.value;if(b!==undefined)ocrCards[Number(b)].back=e.target.value};
-$("ocrPreview").onclick=e=>{const b=e.target.closest("[data-ocr-del]");if(b){ocrCards.splice(Number(b.dataset.ocrDel),1);renderOcr()}};
+$("ocrPreview").oninput=e=>{
+ const f=e.target.dataset.ocrFront,b=e.target.dataset.ocrBack;
+ if(f!==undefined)ocrCards[Number(f)].front=e.target.value;
+ if(b!==undefined)ocrCards[Number(b)].back=e.target.value;
+};
+$("ocrPreview").onclick=e=>{
+ const b=e.target.closest("[data-ocr-del]");
+ if(b){ocrCards.splice(Number(b.dataset.ocrDel),1);renderOcr()}
+};
 $("swapOcr").onclick=()=>{ocrCards=ocrCards.map(x=>({front:x.back,back:x.front}));renderOcr()};
 $("clearOcr").onclick=()=>{$("imageInput").value="";$("cameraInput").value="";resetOcr()};
 $("importOcr").onclick=()=>{
- const rows=ocrCards.filter(x=>x.front.trim()&&x.back.trim());if(!rows.length){alert("请先补全至少一张纸卡的正面和背面。");return}
+ const rows=ocrCards.filter(x=>x.front.trim()&&x.back.trim());
+ if(!rows.length){alert("请先补全至少一张纸卡的正面和背面。");return}
  const f=currentFolder();if(!f){alert("请先选择一个文件夹。");return}
  f.cards.push(...rows.map(x=>({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:x.front.trim(),back:x.back.trim(),reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null})));
- cardIndex=f.cards.length-rows.length;const ok=persist();renderFolder();renderFolders();renderHome();
- if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 打开下载后的 HTML。");
+ cardIndex=f.cards.length-rows.length;
+ const ok=persist();renderFolder();renderFolders();renderHome();
+ if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}
+ else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 正常打开下载后的 HTML。");
 };
 
 /* Navigation */
