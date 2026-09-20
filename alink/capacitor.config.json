@@ -1,0 +1,8 @@
+{
+  "appId": "com.papercards.app",
+  "appName": "纸卡",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}
