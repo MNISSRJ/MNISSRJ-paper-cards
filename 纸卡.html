@@ -453,6 +453,61 @@ button:active{transform:translateY(1px)}
   .session-hint{font-size:9px;margin-top:5px}
 }
 
+
+  /* ===== mobile page scrolling fix =====
+     手机上内容较长时，允许整页上下滑动，不再把超出的内容裁掉。 */
+  html,body{
+    height:auto!important;
+    min-height:100%;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  body{touch-action:pan-y}
+  .app{
+    height:auto!important;
+    min-height:100dvh;
+    overflow:visible!important;
+  }
+  .shell{
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  .main{
+    height:auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  .page,.page.active{
+    height:auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  .home-page{overflow:visible!important}
+  .folder-page{overflow:visible!important}
+
+  /* 添加纸卡 / 图片识别页面也允许整页滚动 */
+  .add-page{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .add-inner{
+    height:auto!important;
+    min-height:100%;
+    overflow:visible!important;
+  }
+  .add-mode{overflow:visible!important}
+
+  /* 学习页面内容过长时可以上下滑动 */
+  .session{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .session-card-wrap{flex:0 0 auto}
+
 </style>
 </head>
 <body>
