@@ -628,8 +628,8 @@ button:active{transform:translateY(1px)}
    </div>
    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
     <button class="btn" id="chooseImportFile">📄 选择文件导入</button>
-    <span id="importFileName" style="font-size:11px;color:#7d8996">支持 .txt / .csv / .json</span>
-    <input type="file" id="batchFileInput" accept=".txt,.csv,.json,text/plain,text/csv,application/json" hidden>
+    <span id="importFileName" style="font-size:11px;color:#7d8996">支持 TXT / CSV / JSON / Excel / Word / PDF</span>
+    <input type="file" id="batchFileInput" accept=".txt,.csv,.json,.xlsx,.xls,.docx,.pdf,text/plain,text/csv,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
    </div>
    <textarea class="batch-box" id="batchText" placeholder="grocer	食品杂货商
 influence	影响
@@ -1082,6 +1082,67 @@ function parseImportedFileText(text,filename){
   throw new Error("JSON 文件格式不正确");
  }
 }
+async function loadExternalScript(src){
+ return await new Promise((resolve,reject)=>{
+  const exists=[...document.scripts].some(s=>s.src===src);
+  if(exists){resolve();return}
+  const el=document.createElement("script");
+  el.src=src;el.onload=resolve;el.onerror=()=>reject(new Error("解析组件加载失败"));
+  document.head.appendChild(el);
+ });
+}
+
+async function extractOfficeFileText(file){
+ const name=String(file.name||"").toLowerCase();
+ if(name.endsWith(".docx")){
+  await loadExternalScript("https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js");
+  const ab=await file.arrayBuffer();
+  const result=await window.mammoth.extractRawText({arrayBuffer:ab});
+  return result.value||"";
+ }
+ if(name.endsWith(".xlsx")||name.endsWith(".xls")){
+  await loadExternalScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js");
+  const ab=await file.arrayBuffer();
+  const wb=window.XLSX.read(ab,{type:"array"});
+  const rows=[];
+  wb.SheetNames.forEach(sheetName=>{
+   const sheet=wb.Sheets[sheetName];
+   const matrix=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:""});
+   matrix.forEach(row=>{
+    const cells=row.map(x=>String(x??"").trim()).filter(Boolean);
+    if(cells.length>=2)rows.push(cells[0]+"\\t"+cells.slice(1).join(" "));
+    else if(cells.length===1)rows.push(cells[0]);
+   });
+  });
+  return rows.join("\\n");
+ }
+ if(name.endsWith(".pdf")){
+  await loadExternalScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs");
+  // pdf.js ESM 在部分移动浏览器上不能通过普通 script 注入，因此改用动态 import。
+  const pdfjs=await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs");
+  const ab=await file.arrayBuffer();
+  const pdf=await pdfjs.getDocument({data:ab}).promise;
+  const pages=[];
+  for(let p=1;p<=pdf.numPages;p++){
+   const page=await pdf.getPage(p);
+   const content=await page.getTextContent();
+   const items=content.items||[];
+   let line="",lastY=null;
+   for(const item of items){
+    const y=item.transform?.[5]??0;
+    if(lastY!==null&&Math.abs(y-lastY)>5&&line.trim()){
+     pages.push(line.trim());line="";
+    }
+    line+=(item.str||"")+" ";
+    lastY=y;
+   }
+   if(line.trim())pages.push(line.trim());
+  }
+  return pages.join("\\n");
+ }
+ return null;
+}
+
 async function importBatchFile(file){
  if(!file)return;
  $("importFileName").textContent=`正在读取：${file.name}`;
@@ -1090,10 +1151,17 @@ async function importBatchFile(file){
   if(/\.json$/i.test(file.name)){
    const rows=parseImportedFileText(text,file.name);
    if(!rows.length)throw new Error("JSON 中没有找到有效的正反面内容");
-   const f=currentFolder();
-   if(!f){alert("请先选择一个文件夹。");return}
    $("batchText").value=rows.map(x=>`${x.front}\\t${x.back}`).join("\\n");
    $("batchDelimiter").value="tab";
+  }else if(/\.(docx|xlsx|xls|pdf)$/i.test(file.name)){
+   const extracted=await extractOfficeFileText(file);
+   if(!String(extracted||"").trim()){
+    throw new Error(/\.pdf$/i.test(file.name)
+      ?"这个 PDF 没有可复制的文字。它可能是扫描件，请使用“图片识别”上传 PDF 页面截图。"
+      :"文件中没有读取到文字内容");
+   }
+   $("batchText").value=String(extracted).replace(/\\r\\n/g,"\\n").replace(/\\r/g,"\\n");
+   $("batchDelimiter").value="auto";
   }else{
    $("batchText").value=text.replace(/\\r\\n/g,"\\n").replace(/\\r/g,"\\n");
    $("batchDelimiter").value="auto";
