@@ -624,7 +624,12 @@ button:active{transform:translateY(1px)}
   <section class="add-mode" id="addBatch">
    <div class="import-help">
     <strong>批量导入</strong>
-    <span>每行一张卡；支持 Tab、逗号、连续空格。可调换前后顺序。</span>
+    <span>每行一张卡；支持 Tab、逗号、连续空格，也可以直接导入 TXT / CSV / JSON 文件。</span>
+   </div>
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+    <button class="btn" id="chooseImportFile">📄 选择文件导入</button>
+    <span id="importFileName" style="font-size:11px;color:#7d8996">支持 .txt / .csv / .json</span>
+    <input type="file" id="batchFileInput" accept=".txt,.csv,.json,text/plain,text/csv,application/json" hidden>
    </div>
    <textarea class="batch-box" id="batchText" placeholder="grocer	食品杂货商
 influence	影响
@@ -1058,6 +1063,52 @@ function splitImportLine(line, mode){
  if(!left||!right)return null;
  return {left,right};
 }
+function parseImportedFileText(text,filename){
+ const name=String(filename||"").toLowerCase();
+ try{
+  if(name.endsWith(".json")){
+   const x=JSON.parse(text);
+   const list=Array.isArray(x)?x:(Array.isArray(x.cards)?x:(Array.isArray(x.data?.folders)?x.data.folders.flatMap(f=>f.cards||[]):[]));
+   return list.map(c=>{
+    if(!c)return null;
+    const front=String(c.front??c.question??c.term??"").trim();
+    const back=String(c.back??c.answer??c.definition??"").trim();
+    return front&&back?{front,back}:null;
+   }).filter(Boolean);
+  }
+  // TXT / CSV：先放入批量文本框，再沿用现有分隔符解析逻辑。
+  return null;
+ }catch(e){
+  throw new Error("JSON 文件格式不正确");
+ }
+}
+async function importBatchFile(file){
+ if(!file)return;
+ $("importFileName").textContent=`正在读取：${file.name}`;
+ try{
+  const text=await file.text();
+  if(/\.json$/i.test(file.name)){
+   const rows=parseImportedFileText(text,file.name);
+   if(!rows.length)throw new Error("JSON 中没有找到有效的正反面内容");
+   const f=currentFolder();
+   if(!f){alert("请先选择一个文件夹。");return}
+   $("batchText").value=rows.map(x=>`${x.front}\\t${x.back}`).join("\\n");
+   $("batchDelimiter").value="tab";
+  }else{
+   $("batchText").value=text.replace(/\\r\\n/g,"\\n").replace(/\\r/g,"\\n");
+   $("batchDelimiter").value="auto";
+  }
+  parseBatch();
+  $("importFileName").textContent=`已载入：${file.name}`;
+  toast("文件已载入，请检查预览后导入");
+ }catch(e){
+  $("importFileName").textContent="文件读取失败";
+  alert(e?.message||"无法读取这个文件。");
+ }
+}
+$("chooseImportFile").onclick=()=>$("batchFileInput").click();
+$("batchFileInput").onchange=()=>importBatchFile($("batchFileInput").files[0]);
+
 function parseBatch(){
  const mode=$("batchDelimiter")?.value||"auto",direction=$("batchDirection")?.value||"normal";
  const lines=$("batchText").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
