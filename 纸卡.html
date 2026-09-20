@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#eee9df">
+<meta name="theme-color" content="#eef2f7">
 <meta name="description" content="纸卡：离线可用的间隔复习学习卡片。">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon.svg">
@@ -13,9 +13,9 @@
 <title>纸卡 · Paper Cards</title>
 <style>
 :root{
- --bg:#eee9df;--surface:#f8f3ea;--paper:#fffdf8;--paper2:#fbf7ef;
- --ink:#292724;--muted:#91887c;--line:#d6cdbf;--soft:#e4dbcf;
- --danger:#984b42;--shadow:0 18px 40px rgba(64,53,40,.13);
+ --bg:#eef2f7;--surface:#f8fafc;--paper:#ffffff;--paper2:#f5f7fb;
+ --ink:#26313d;--muted:#7b8794;--line:#d7dee8;--soft:#e8edf4;
+ --danger:#b45b62;--shadow:0 18px 40px rgba(64,53,40,.13);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:pan-y;background:var(--bg)}
@@ -29,48 +29,48 @@ button:active{transform:translateY(1px)}
 .shell{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr);gap:22px;overflow:hidden}
 .sidebar{min-height:0;border-right:1px solid rgba(150,135,115,.22);padding:5px 18px 0 0;display:flex;flex-direction:column;overflow:hidden}
 .space-title{font-weight:700;margin:0 0 10px}
-.home-nav,.folder{width:100%;border:1px solid transparent;background:transparent;color:#554f48;border-radius:12px;text-align:left;padding:11px 12px}
+.home-nav,.folder{width:100%;border:1px solid transparent;background:transparent;color:#43505e;border-radius:12px;text-align:left;padding:11px 12px}
 .home-nav{background:var(--surface);border-color:var(--line);margin-bottom:18px}
 .home-nav.active,.folder.active{background:var(--ink);color:white;border-color:var(--ink)}
 .section-title{display:flex;align-items:center;justify-content:space-between;font-weight:700;margin:0 0 7px}
-.icon-btn{width:32px;height:32px;border:1px solid var(--line);background:var(--surface);border-radius:9px;color:#5f584f}
+.icon-btn{width:32px;height:32px;border:1px solid var(--line);background:var(--surface);border-radius:9px;color:#566372}
 .folder-list{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px;padding-right:2px}
 .folder .count{float:right;color:inherit;opacity:.55;font-size:12px}
-.folder-add{margin-top:9px;border:1px dashed #b9ad9e;background:transparent;color:#665e55;border-radius:11px;padding:10px}
-.hint{font-size:10px;color:#aaa196;line-height:1.5;margin-top:7px}
+.folder-add{margin-top:9px;border:1px dashed #b8c2cf;background:transparent;color:#657180;border-radius:11px;padding:10px}
+.hint{font-size:10px;color:#9aa5b1;line-height:1.5;margin-top:7px}
 .main{min-width:0;min-height:0;height:100%;overflow:hidden;position:relative}
 .page{display:none;width:100%;height:100%;min-height:0;overflow:hidden}.page.active{display:flex;flex-direction:column}
 
 /* Home */
 .home-card{border:1px solid var(--line);background:rgba(255,253,248,.74);border-radius:18px;padding:22px;flex:0 0 auto}
 .home-row{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.eyebrow{font-size:11px;color:var(--muted);letter-spacing:.12em}.home-title{font:700 27px Georgia,"Songti SC",serif;margin-top:5px}.home-desc{font-size:12px;color:var(--muted);margin-top:5px}
-.home-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);background:var(--surface);color:#514b44;border-radius:10px;padding:8px 12px}.btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.danger{color:var(--danger)}
-.check-status{margin-top:16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#776f65}.dot{width:8px;height:8px;border-radius:50%;background:#bcb3a7}.dot.on{background:var(--ink)}
+.home-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);background:var(--surface);color:#3e4a58;border-radius:10px;padding:8px 12px}.btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.danger{color:var(--danger)}
+.check-status{margin-top:16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#727e8c}.dot{width:8px;height:8px;border-radius:50%;background:#c5cdd7}.dot.on{background:var(--ink)}
 .dashboard{flex:1;min-height:0;display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
 .dash-panel{min-height:0;border:1px solid var(--line);border-radius:16px;background:rgba(255,253,248,.52);padding:17px;overflow:hidden}
 .dash-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.dash-heading strong{font-size:14px}.dash-heading span{font-size:11px;color:var(--muted)}
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.calendar-grid .weekday{text-align:center;font-size:10px;color:#a59c90;padding:3px}.day{height:34px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:#81786d;border:1px solid transparent}.day.empty{background:transparent}.day.checked{background:var(--ink);color:#fff}.day.today{border-color:#a69b8c}
-.month-nav{border:0;background:transparent;color:#756d63;padding:3px 7px}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.mini-stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px}.mini-stat b{display:block;font:700 24px Georgia,"Songti SC",serif}.mini-stat span{font-size:10px;color:var(--muted)}.home-tip{margin-top:12px;font-size:11px;color:#9a9185;line-height:1.6}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.calendar-grid .weekday{text-align:center;font-size:10px;color:#9aa5b1;padding:3px}.day{height:34px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:#74808d;border:1px solid transparent}.day.empty{background:transparent}.day.checked{background:var(--ink);color:#fff}.day.today{border-color:#9aa5b1}
+.month-nav{border:0;background:transparent;color:#6e7a88;padding:3px 7px}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.mini-stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px}.mini-stat b{display:block;font:700 24px Georgia,"Songti SC",serif}.mini-stat span{font-size:10px;color:var(--muted)}.home-tip{margin-top:12px;font-size:11px;color:#8d98a5;line-height:1.6}
 
 /* Folder workspace */
 .folder-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;flex:0 0 auto}.folder-title{font:700 clamp(24px,3vw,30px) Georgia,"Songti SC",serif}.folder-sub{font-size:11px;color:var(--muted);margin-top:4px}.head-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.stats{display:flex;gap:7px}.stat{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:7px 10px;color:#554f48;font-size:11px}.stat b{font-size:15px;margin-right:3px}.stat.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.progress{height:5px;background:#ddd5c9;border-radius:99px;overflow:hidden;margin:10px 0}.progress i{height:100%;display:block;width:0;background:var(--ink);border-radius:99px;transition:width .2s}
+.stats{display:flex;gap:7px}.stat{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:7px 10px;color:#43505e;font-size:11px}.stat b{font-size:15px;margin-right:3px}.stat.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.progress{height:5px;background:#dfe5ec;border-radius:99px;overflow:hidden;margin:10px 0}.progress i{height:100%;display:block;width:0;background:var(--ink);border-radius:99px;transition:width .2s}
 .toolbar{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}.toolbar .btn{padding:7px 10px;font-size:11px}
 .searchbar{display:flex;gap:6px;margin:7px 0;flex:0 0 auto}.searchbar input{flex:1;min-width:0;border:1px solid var(--line);background:rgba(255,253,248,.72);border-radius:10px;padding:7px 10px;outline:none;font-size:12px}
-.filter-panel{display:none;border:1px solid var(--line);background:rgba(255,253,248,.8);border-radius:13px;padding:10px;margin-bottom:7px;max-height:165px;overflow:auto;flex:0 0 auto}.filter-panel.open{display:block}.filter-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.filter-head strong{font-size:12px}.filter-head button{border:0;background:transparent;color:var(--muted)}.card-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.list-card{border:1px solid #ded5c9;border-left:3px solid #cfc4b5;border-radius:10px;background:var(--paper);padding:9px;text-align:left;min-width:0}.list-card.reviewed{border-left-color:var(--ink)}.list-front{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.list-back{font-size:10px;color:#8d8478;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.list-tag{font-size:9px;color:#968d81;margin-top:5px}
-.study-zone{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}.paper{position:relative;width:min(900px,91%);height:min(48vh,390px);min-height:245px;cursor:pointer;filter:drop-shadow(0 20px 28px rgba(65,54,40,.15))}.face{position:absolute;inset:0;border:1px solid #d4cabc;border-radius:10px;background:var(--paper);display:flex;align-items:center;justify-content:center;text-align:center;padding:45px;overflow:hidden;transition:opacity .16s,transform .16s}.face:before{content:"";position:absolute;inset:0;opacity:.25;background:repeating-linear-gradient(0deg,transparent 0 5px,#d8d0c4 5px 6px),repeating-linear-gradient(90deg,transparent 0 8px,#e7e0d6 8px 9px)}.face:after{content:"";position:absolute;inset:11px;border:1px solid rgba(130,115,95,.15)}.face.back{opacity:0;transform:scale(.985);pointer-events:none;background:var(--paper2)}.paper.show-back .front{opacity:0;transform:scale(.985);pointer-events:none}.paper.show-back .back{opacity:1;transform:scale(1);pointer-events:auto}.corner{position:absolute;top:17px;left:22px;z-index:2;font-size:9px;letter-spacing:.16em;color:#a39a8e}.paper-pos{position:absolute;right:22px;top:17px;z-index:2;font-size:10px;color:#a39a8e}.paper-hint{position:absolute;bottom:17px;z-index:2;font-size:10px;color:#aaa196}.paper-front{position:relative;z-index:2;font:clamp(30px,4vw,43px)/1.3 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}.paper-back{position:relative;z-index:2;font:clamp(18px,2.4vw,24px)/1.65 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}
-.nav-arrows{position:absolute;left:1%;right:1%;top:50%;transform:translateY(-50%);display:flex;justify-content:space-between;pointer-events:none}.arrow{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,253,248,.82);color:#615a52;font-size:23px}
-.bottom-actions{flex:0 0 auto;text-align:center}.review-row,.paper-actions{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}.review-row .btn{min-width:92px}.review-row .active{background:var(--ink);color:#fff;border-color:var(--ink)}.review-info{font-size:10px;color:#9a9185;margin:4px 0}.add-entry{text-align:center;flex:0 0 auto;margin-top:5px}.add-entry button{border:1px solid var(--line);background:var(--surface);color:#5c554d;border-radius:10px;padding:6px 13px;font-size:11px}
-.empty{color:#aaa196;font-size:12px;text-align:center;line-height:1.7}
+.filter-panel{display:none;border:1px solid var(--line);background:rgba(255,253,248,.8);border-radius:13px;padding:10px;margin-bottom:7px;max-height:165px;overflow:auto;flex:0 0 auto}.filter-panel.open{display:block}.filter-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.filter-head strong{font-size:12px}.filter-head button{border:0;background:transparent;color:var(--muted)}.card-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.list-card{border:1px solid #dfe5ec;border-left:3px solid #cbd4df;border-radius:10px;background:var(--paper);padding:9px;text-align:left;min-width:0}.list-card.reviewed{border-left-color:var(--ink)}.list-front{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.list-back{font-size:10px;color:#788594;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.list-tag{font-size:9px;color:#8793a0;margin-top:5px}
+.study-zone{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}.paper{position:relative;width:min(900px,91%);height:min(48vh,390px);min-height:245px;cursor:pointer;filter:drop-shadow(0 20px 28px rgba(65,54,40,.15))}.face{position:absolute;inset:0;border:1px solid #d4dce6;border-radius:10px;background:var(--paper);display:flex;align-items:center;justify-content:center;text-align:center;padding:45px;overflow:hidden;transition:opacity .16s,transform .16s}.face:before{content:"";position:absolute;inset:0;opacity:.25;background:repeating-linear-gradient(0deg,transparent 0 5px,#dce3eb 5px 6px),repeating-linear-gradient(90deg,transparent 0 8px,#eef2f6 8px 9px)}.face:after{content:"";position:absolute;inset:11px;border:1px solid rgba(130,115,95,.15)}.face.back{opacity:0;transform:scale(.985);pointer-events:none;background:var(--paper2)}.paper.show-back .front{opacity:0;transform:scale(.985);pointer-events:none}.paper.show-back .back{opacity:1;transform:scale(1);pointer-events:auto}.corner{position:absolute;top:17px;left:22px;z-index:2;font-size:9px;letter-spacing:.16em;color:#929eaa}.paper-pos{position:absolute;right:22px;top:17px;z-index:2;font-size:10px;color:#929eaa}.paper-hint{position:absolute;bottom:17px;z-index:2;font-size:10px;color:#9aa5b1}.paper-front{position:relative;z-index:2;font:clamp(30px,4vw,43px)/1.3 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}.paper-back{position:relative;z-index:2;font:clamp(18px,2.4vw,24px)/1.65 Georgia,"Songti SC",serif;max-width:88%;word-break:break-word}
+.nav-arrows{position:absolute;left:1%;right:1%;top:50%;transform:translateY(-50%);display:flex;justify-content:space-between;pointer-events:none}.arrow{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,253,248,.82);color:#596675;font-size:23px}
+.bottom-actions{flex:0 0 auto;text-align:center}.review-row,.paper-actions{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}.review-row .btn{min-width:92px}.review-row .active{background:var(--ink);color:#fff;border-color:var(--ink)}.review-info{font-size:10px;color:#8d98a5;margin:4px 0}.add-entry{text-align:center;flex:0 0 auto;margin-top:5px}.add-entry button{border:1px solid var(--line);background:var(--surface);color:#52606e;border-radius:10px;padding:6px 13px;font-size:11px}
+.empty{color:#9aa5b1;font-size:12px;text-align:center;line-height:1.7}
 
 /* Fullscreen modals/pages */
 .overlay{position:fixed;inset:0;background:rgba(38,34,29,.38);z-index:80;display:none;align-items:center;justify-content:center;padding:18px}.overlay.open{display:flex}
-.dialog{width:min(470px,100%);max-height:88vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 25px 60px rgba(0,0,0,.18)}.dialog h3{margin:0 0 13px;font:700 21px Georgia,"Songti SC",serif}.dialog label{display:block;font-size:11px;color:#81786c;margin:10px 0 5px}.dialog input,.dialog textarea{width:100%;border:1px solid var(--line);background:#fffdf9;border-radius:10px;padding:10px;outline:none}.dialog textarea{min-height:90px;resize:vertical}.dialog-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:14px}.dialog-actions button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 13px}.dialog-actions .ok{background:var(--ink);color:#fff;border-color:var(--ink)}
-.add-page{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;overflow:hidden}.add-page.open{display:flex}.add-inner{width:min(1050px,100%);height:100%;margin:auto;padding:22px 28px;display:flex;flex-direction:column;overflow:hidden}.add-header{display:flex;justify-content:space-between;align-items:flex-start;flex:0 0 auto}.add-title{font:700 28px Georgia,"Songti SC",serif}.add-folder{font-size:11px;color:var(--muted);margin-top:4px}.add-sheet{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.add-col{min-height:0;display:flex;flex-direction:column}.add-label{font-size:11px;color:#81786c;margin:0 0 7px 3px}.add-box{flex:1;min-height:0;width:100%;border:1px solid #d4cabc;border-radius:12px;background:var(--paper);padding:24px;outline:none;resize:none;box-shadow:var(--shadow);font:22px/1.6 Georgia,"Songti SC",serif}.add-box.back-box{background:var(--paper2);font-size:18px}.add-footer{display:flex;justify-content:center;gap:7px;margin-top:15px;flex:0 0 auto}
+.dialog{width:min(470px,100%);max-height:88vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 25px 60px rgba(0,0,0,.18)}.dialog h3{margin:0 0 13px;font:700 21px Georgia,"Songti SC",serif}.dialog label{display:block;font-size:11px;color:#74808d;margin:10px 0 5px}.dialog input,.dialog textarea{width:100%;border:1px solid var(--line);background:#ffffff;border-radius:10px;padding:10px;outline:none}.dialog textarea{min-height:90px;resize:vertical}.dialog-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:14px}.dialog-actions button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 13px}.dialog-actions .ok{background:var(--ink);color:#fff;border-color:var(--ink)}
+.add-page{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;overflow:hidden}.add-page.open{display:flex}.add-inner{width:min(1050px,100%);height:100%;margin:auto;padding:22px 28px;display:flex;flex-direction:column;overflow:hidden}.add-header{display:flex;justify-content:space-between;align-items:flex-start;flex:0 0 auto}.add-title{font:700 28px Georgia,"Songti SC",serif}.add-folder{font-size:11px;color:var(--muted);margin-top:4px}.add-sheet{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.add-col{min-height:0;display:flex;flex-direction:column}.add-label{font-size:11px;color:#74808d;margin:0 0 7px 3px}.add-box{flex:1;min-height:0;width:100%;border:1px solid #d4dce6;border-radius:12px;background:var(--paper);padding:24px;outline:none;resize:none;box-shadow:var(--shadow);font:22px/1.6 Georgia,"Songti SC",serif}.add-box.back-box{background:var(--paper2);font-size:18px}.add-footer{display:flex;justify-content:center;gap:7px;margin-top:15px;flex:0 0 auto}
 
 /* Study session */
-.session{position:fixed;inset:0;background:var(--bg);z-index:110;display:none;flex-direction:column;padding:18px 24px}.session.open{display:flex}.session-head{display:flex;justify-content:space-between;align-items:center}.session-title{font:700 22px Georgia,"Songti SC",serif}.session-count{font-size:11px;color:var(--muted)}.session-progress{height:5px;background:#ddd5c9;border-radius:99px;margin:12px 0}.session-progress i{display:block;height:100%;width:0;background:var(--ink);border-radius:99px}.session-card-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}.session-card{width:min(900px,90%);height:min(60vh,480px);min-height:270px}.session-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.session-buttons .btn{min-width:105px}.session-buttons .btn:nth-child(1){border-color:#c8877f;color:#934f48}.session-buttons .btn:nth-child(2){border-color:#d3a46d;color:#8a5c2b}.session-buttons .btn:nth-child(3){border-color:#86a995;color:#3e7251}.session-buttons .btn:nth-child(4){border-color:#687f9c;color:#304d6d}.session-hint{text-align:center;font-size:10px;color:#a0988c;margin-top:7px}
+.session{position:fixed;inset:0;background:var(--bg);z-index:110;display:none;flex-direction:column;padding:18px 24px}.session.open{display:flex}.session-head{display:flex;justify-content:space-between;align-items:center}.session-title{font:700 22px Georgia,"Songti SC",serif}.session-count{font-size:11px;color:var(--muted)}.session-progress{height:5px;background:#dfe5ec;border-radius:99px;margin:12px 0}.session-progress i{display:block;height:100%;width:0;background:var(--ink);border-radius:99px}.session-card-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}.session-card{width:min(900px,90%);height:min(60vh,480px);min-height:270px}.session-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.session-buttons .btn{min-width:105px}.session-buttons .btn:nth-child(1){border-color:#c47a83;color:#a94f5b}.session-buttons .btn:nth-child(2){border-color:#c9a15b;color:#80623a}.session-buttons .btn:nth-child(3){border-color:#79a99a;color:#4d8b76}.session-buttons .btn:nth-child(4){border-color:#7289a6;color:#526f95}.session-hint{text-align:center;font-size:10px;color:#8f9aa7;margin-top:7px}
 
 /* responsive */
 @media(max-width:850px){
@@ -123,20 +123,20 @@ button:active{transform:translateY(1px)}
 
 /* ===== v2 product polish ===== */
 .folder{position:relative;padding-left:16px}
-.folder-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--folder-accent,#8c8378);vertical-align:1px}
+.folder-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--folder-accent,#7f8a97);vertical-align:1px}
 .folder.active .folder-dot{box-shadow:0 0 0 2px rgba(255,255,255,.15)}
-.folder-select{display:none;width:100%;border:1px solid var(--line);background:var(--surface);color:#554f48;border-radius:10px;padding:9px 10px;margin-bottom:7px;outline:none}
+.folder-select{display:none;width:100%;border:1px solid var(--line);background:var(--surface);color:#43505e;border-radius:10px;padding:9px 10px;margin-bottom:7px;outline:none}
 .more-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.more-grid .btn{text-align:left}
-.review-row .btn:nth-child(1){border-color:#c8877f;color:#934f48;background:#fbefed}
-.review-row .btn:nth-child(2){border-color:#d3a46d;color:#8a5c2b;background:#fbf3e7}
-.review-row .btn:nth-child(3){border-color:#86a995;color:#3e7251;background:#eff7f1}
-.review-row .btn:nth-child(4){border-color:#687f9c;color:#304d6d;background:#edf2f7}
+.review-row .btn:nth-child(1){border-color:#c47a83;color:#a94f5b;background:#fbf0f2}
+.review-row .btn:nth-child(2){border-color:#c9a15b;color:#80623a;background:#faf5e9}
+.review-row .btn:nth-child(3){border-color:#79a99a;color:#4d8b76;background:#eef8f3}
+.review-row .btn:nth-child(4){border-color:#7289a6;color:#526f95;background:#eef3f8}
 .review-row .btn:hover{filter:brightness(.98)}
 .stamp-wrap{display:flex;align-items:center;gap:12px;margin-top:16px}
-.stamp{width:64px;height:64px;border:2px solid #a79a89;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;font:700 11px/1.2 Georgia,"Songti SC",serif;color:#8e8170;transform:rotate(-7deg);background:rgba(248,243,234,.75)}
-.stamp.done{border-color:#292724;color:#292724;box-shadow:inset 0 0 0 3px rgba(41,39,36,.08)}
-.check-copy{font-size:11px;color:#8c8378}.check-copy b{display:block;color:#514a42;font-size:13px;margin-bottom:3px}
-.due-badge{display:inline-block;margin-left:5px;font-size:9px;padding:2px 5px;border-radius:99px;background:#f2e7db;color:#8b5d43}
+.stamp{width:64px;height:64px;border:2px solid #929eaa;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;font:700 11px/1.2 Georgia,"Songti SC",serif;color:#7d8996;transform:rotate(-7deg);background:rgba(248,243,234,.75)}
+.stamp.done{border-color:#26313d;color:#26313d;box-shadow:inset 0 0 0 3px rgba(41,39,36,.08)}
+.check-copy{font-size:11px;color:#7f8a97}.check-copy b{display:block;color:#3e4a58;font-size:13px;margin-bottom:3px}
+.due-badge{display:inline-block;margin-left:5px;font-size:9px;padding:2px 5px;border-radius:99px;background:#e8edf4;color:#7a6470}
 .list-tag .due-badge{margin-left:3px}
 #filterPanel.open{animation:fadeIn .14s ease}@keyframes fadeIn{from{opacity:.5;transform:translateY(-3px)}to{opacity:1;transform:none}}
 @media(max-width:700px){
@@ -151,18 +151,18 @@ button:active{transform:translateY(1px)}
 
 
 .add-tabs{display:flex;gap:5px;margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:7px;flex:0 0 auto}
-.add-tab{border:1px solid transparent;background:transparent;color:#756d63;border-radius:9px;padding:8px 13px;font-size:12px}
+.add-tab{border:1px solid transparent;background:transparent;color:#6e7a88;border-radius:9px;padding:8px 13px;font-size:12px}
 .add-tab.active{background:var(--ink);color:#fff}
 .add-mode{display:none;flex:1;min-height:0;flex-direction:column}
 .add-mode.active{display:flex}
 .import-help{display:flex;justify-content:space-between;gap:15px;align-items:center;margin:16px 2px 8px;font-size:11px;color:var(--muted)}
 .batch-box{flex:1;min-height:0;width:100%;resize:none;border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:18px;outline:none;font:15px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:var(--shadow)}
-.import-preview{margin-top:8px;max-height:115px;overflow:auto;font-size:10px;color:#8e857a;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
+.import-preview{margin-top:8px;max-height:115px;overflow:auto;font-size:10px;color:#7e8995;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
 .image-import{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.image-drop{width:min(650px,100%);min-height:210px;border:1px dashed #b9ad9e;border-radius:16px;background:rgba(255,253,248,.62);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
-.image-icon{font-size:35px;color:#82786d}
+.image-drop{width:min(650px,100%);min-height:210px;border:1px dashed #b8c2cf;border-radius:16px;background:rgba(255,253,248,.62);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+.image-icon{font-size:35px;color:#75818e}
 .image-drop strong{font:700 19px Georgia,"Songti SC",serif}.image-drop span{font-size:11px;color:var(--muted)}
-.ocr-status{margin-top:12px;font-size:11px;color:#8c8377;text-align:center}
+.ocr-status{margin-top:12px;font-size:11px;color:#7f8a97;text-align:center}
 .ocr-preview{width:min(750px,100%);max-height:210px;overflow:auto;margin-top:10px}
 .ocr-row{display:grid;grid-template-columns:1fr 1fr 35px;gap:6px;margin-bottom:6px}
 .ocr-row input{border:1px solid var(--line);border-radius:8px;padding:7px;background:var(--paper)}
@@ -454,7 +454,10 @@ button:active{transform:translateY(1px)}
 }
 
 
-  /* ===== mobile page scrolling fix =====
+  /* ===== cool mist blue theme =====
+   更轻、更清爽的雾蓝配色：背景偏冷，纸卡保持接近白色，
+   重点按钮使用低饱和蓝紫色，减少原来的米黄色和棕色感。 */
+/* ===== mobile page scrolling fix =====
      手机上内容较长时，允许整页上下滑动，不再把超出的内容裁掉。 */
   html,body{
     height:auto!important;
@@ -645,7 +648,7 @@ sustain	维持"></textarea>
        <button class="btn dark" id="scanImage">📷 扫图</button>
        <button class="btn" id="chooseImage">🖼 截图 / 相册</button>
      </div>
-     <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#756d63">
+     <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#6e7a88">
        <label>识别速度 <select id="ocrMode"><option value="fast" selected>快速（推荐）</option><option value="precise">精确（慢）</option></select></label>
        <label>文字语言 <select id="ocrLanguage"><option value="chi_sim+eng" selected>中英混合</option><option value="chi_sim">仅中文</option><option value="eng">仅英文（最快）</option></select></label>
      </div>
@@ -753,7 +756,7 @@ function openAccountDialog(){
   $("dialog").innerHTML=`<h3>账号与同步</h3><p style="font-size:13px;line-height:1.7;color:#625a52">已登录：<b>${esc(cloudUser.email||"")}</b></p><div class="dialog-actions" style="justify-content:space-between"><button class="btn danger" id="logoutBtn">退出登录</button><span><button data-close>关闭</button><button class="ok" id="syncNowBtn">立即同步</button></span></div>`;
   $("dialogOverlay").classList.add("open");$("syncNowBtn").onclick=async()=>{await pushCloudData();$("dialogOverlay").classList.remove("open");toast("同步完成")};$("logoutBtn").onclick=async()=>{await cloud.auth.signOut();cloudUser=null;updateAccountButton();$("dialogOverlay").classList.remove("open");toast("已退出登录")};document.querySelector("[data-close]").onclick=()=>$('dialogOverlay').classList.remove('open');return
  }
- $("dialog").innerHTML='<h3>登录以同步纸卡</h3><label>邮箱</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"><label>密码</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="至少 6 位"><p style="font-size:11px;color:#91887c;line-height:1.6">注册后，纸卡会加密传输并按账号隔离；请勿使用公共设备保存登录状态。</p><div class="dialog-actions"><button data-close>取消</button><button id="authSignup">注册</button><button class="ok" id="authLogin">登录</button></div>';
+ $("dialog").innerHTML='<h3>登录以同步纸卡</h3><label>邮箱</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"><label>密码</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="至少 6 位"><p style="font-size:11px;color:#7b8794;line-height:1.6">注册后，纸卡会加密传输并按账号隔离；请勿使用公共设备保存登录状态。</p><div class="dialog-actions"><button data-close>取消</button><button id="authSignup">注册</button><button class="ok" id="authLogin">登录</button></div>';
  $("dialogOverlay").classList.add("open");
  const auth=async(mode)=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||password.length<6){toast("请输入邮箱和至少 6 位密码");return}const result=mode==="login"?await cloud.auth.signInWithPassword({email,password}):await cloud.auth.signUp({email,password});if(result.error){toast("操作失败："+result.error.message);return}if(mode==="signup"&&!result.data.session){toast("注册成功，请到邮箱完成验证后再登录");return}cloudUser=result.data.user;updateAccountButton();$("dialogOverlay").classList.remove("open");await pullCloudData(true);toast("登录成功，正在同步")};
  $("authLogin").onclick=()=>auth("login");$("authSignup").onclick=()=>auth("signup");document.querySelector("[data-close]").onclick=()=>$('dialogOverlay').classList.remove('open')
@@ -811,7 +814,7 @@ function applyRating(c,r){
 }
 
 function renderFolders(){
- $("folders").innerHTML=data.folders.map(f=>`<button class="folder ${f.id===folderId?"active":""}" style="--folder-accent:${f.color||"#8c8378"}" data-id="${esc(f.id)}"><span class="folder-dot"></span>${esc(f.name)} <span class="count">${f.cards.length}</span></button>`).join("");
+ $("folders").innerHTML=data.folders.map(f=>`<button class="folder ${f.id===folderId?"active":""}" style="--folder-accent:${f.color||"#7f8a97"}" data-id="${esc(f.id)}"><span class="folder-dot"></span>${esc(f.name)} <span class="count">${f.cards.length}</span></button>`).join("");
  $("folderSelect").innerHTML=`<option value="">选择文件夹</option>`+data.folders.map(f=>`<option value="${esc(f.id)}">${esc(f.name)} · ${f.cards.length} 张</option>`).join("");
  $("folderSelect").value=folderId||"";
  $("topTotal").textContent=`${data.folders.length} 个文件夹 · ${totalCards()} 张纸卡`;
@@ -995,7 +998,7 @@ function openMore(){
 
 function deleteCurrentCard(){
  const f=currentFolder(),c=f?.cards[cardIndex];if(!c)return;
- $("dialog").innerHTML=`<h3>删除纸卡</h3><p style="font-size:13px;line-height:1.7;color:#625a52">确定删除这张纸卡吗？<br><b>「${esc(c.front)}」</b><br><span style="font-size:11px;color:#9a9185">${esc(c.back)}</span></p><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgDeleteCard">删除</button></div>`;
+ $("dialog").innerHTML=`<h3>删除纸卡</h3><p style="font-size:13px;line-height:1.7;color:#625a52">确定删除这张纸卡吗？<br><b>「${esc(c.front)}」</b><br><span style="font-size:11px;color:#8d98a5">${esc(c.back)}</span></p><div class="dialog-actions"><button data-close>取消</button><button class="ok" id="dlgDeleteCard">删除</button></div>`;
  $("dialogOverlay").classList.add("open");
  $("dlgDeleteCard").onclick=()=>{f.cards.splice(cardIndex,1);if(cardIndex>=f.cards.length)cardIndex=Math.max(0,f.cards.length-1);persist();$("dialogOverlay").classList.remove("open");renderFolder();renderFolders();renderHome()};
  document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$("dialogOverlay").classList.remove("open"));
