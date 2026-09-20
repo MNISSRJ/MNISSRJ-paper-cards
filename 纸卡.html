@@ -882,6 +882,23 @@ function renderFolder(){
  $("progress").style.width=(f.cards.length?r/f.cards.length*100:0)+"%";
  const list=visibleIndices();
  if(!list.length){renderEmpty();return}
+
+ // 今天已经复习过的纸卡，在主学习区直接显示“今日已复习”，不再展示词卡内容。
+ const today=todayKey();
+ const todayReviewed=f.cards[cardIndex]?.lastReviewed?.slice(0,10)===today;
+ if(filter==="all"&&todayReviewed&&filtered===null){
+  $("paperFront").textContent="";
+  $("paperBack").textContent="";
+  $("paperPos").textContent="";
+  $("paperPosBack").textContent="";
+  $("paper").classList.remove("show-back");
+  $("paper").style.display="none";
+  document.querySelector(".nav-arrows").style.display="none";
+  $("reviewInfo").textContent="今天已复习";
+  return;
+ }
+ $("paper").style.display="";
+ document.querySelector(".nav-arrows").style.display="";
  if(!list.includes(cardIndex))cardIndex=list[0];
  const c=f.cards[cardIndex];
  $("paperFront").textContent=c.front;$("paperBack").textContent=c.back;
