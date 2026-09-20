@@ -1085,13 +1085,13 @@ $("saveBatch").onclick=()=>{
  if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 正常打开 HTML 文件。");
 };
 
-/* Image OCR: local Tesseract + layout-aware card pairing. */
+/* Image OCR: local Tesseract + vocabulary-list parsing. */
 let ocrCards=[],ocrWorker=null,ocrWorkerLanguage="";
 function resetOcr(){
  ocrCards=[];
  $("ocrPreview").innerHTML="";
  $("ocrActions").style.display="none";
- $("ocrStatus").textContent="快速模式：识别文字后会按图片排版自动配对正反面，并合并换行内容。首次使用需要下载 OCR 组件。";
+ $("ocrStatus").textContent="快速模式：先识别整行，再按中英文边界配对并合并换行。";
 }
 $("scanImage").onclick=()=>$("cameraInput").click();
 $("chooseImage").onclick=()=>$("imageInput").click();
@@ -1103,7 +1103,7 @@ async function ensureTesseract(){
  for(const url of urls){
   try{
    await new Promise((resolve,reject)=>{
-    const s=document.createElement("script");s.src=url;s.onload=()=>resolve();s.onerror=()=>reject();document.head.appendChild(s);
+    const s=document.createElement("script");s.src=url;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
    });
    if(window.Tesseract)return true;
   }catch(e){}
@@ -1115,24 +1115,27 @@ async function preprocessImage(file,mode){
  return await new Promise(resolve=>{
   const img=new Image(),url=URL.createObjectURL(file);
   img.onload=()=>{
-   const max=mode==="fast"?1800:2600;
+   const max=mode==="fast"?2200:3000;
    const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
    const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
    const c=document.createElement("canvas");c.width=w;c.height=h;
    const ctx=c.getContext("2d");
    ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+
    if(mode==="fast"){
     URL.revokeObjectURL(url);
-    c.toBlob(b=>resolve(b||file),"image/jpeg",.9);
+    c.toBlob(b=>resolve(b||file),"image/jpeg",.94);
     return;
    }
+
    const d=ctx.getImageData(0,0,w,h),p=d.data;
    for(let i=0;i<p.length;i+=4){
     const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
-    const v=g>190?255:g<85?0:g;
+    const v=g>200?255:g<75?0:g;
     p[i]=p[i+1]=p[i+2]=v;
    }
-   ctx.putImageData(d,0,0);URL.revokeObjectURL(url);
+   ctx.putImageData(d,0,0);
+   URL.revokeObjectURL(url);
    c.toBlob(b=>resolve(b||file),"image/png");
   };
   img.onerror=()=>{URL.revokeObjectURL(url);resolve(file)};
@@ -1144,89 +1147,137 @@ function cleanOcrText(s){
  return String(s||"")
   .replace(/[\u0000-\u001f]/g," ")
   .replace(/[|¦]/g," ")
+  .replace(/[“”]/g,'"')
+  .replace(/[‘’]/g,"'")
   .replace(/\s+/g," ")
   .trim();
 }
+function hasChinese(s){return /[\u3400-\u9fff]/.test(s)}
+function hasEnglish(s){return /[A-Za-z]/.test(s)}
+function isChineseOnly(s){return hasChinese(s)&&!hasEnglish(s)}
+function isEnglishOnly(s){return hasEnglish(s)&&!hasChinese(s)}
 
-function flattenOcrLines(blocks){
- const lines=[];
- (blocks||[]).forEach(block=>{
-  (block.paragraphs||[]).forEach(par=>{
-   (par.lines||[]).forEach(line=>{
-    const words=(line.words||[])
-      .filter(w=>cleanOcrText(w.text))
-      .map(w=>({text:cleanOcrText(w.text),bbox:w.bbox||{x0:0,y0:0,x1:0,y1:0},confidence:Number(w.confidence)||0}))
-      .filter(w=>w.text);
-    const text=cleanOcrText(line.text||words.map(w=>w.text).join(" "));
-    if(text)lines.push({text,words,bbox:line.bbox||null});
-   });
-  });
- });
- return lines.sort((a,b)=>(a.bbox?.y0||0)-(b.bbox?.y0||0));
-}
+function splitOcrLine(line){
+ const text=cleanOcrText(line);
+ if(!text)return null;
 
-function median(nums){
- const a=nums.filter(Number.isFinite).slice().sort((x,y)=>x-y);
- if(!a.length)return 0;
- return a[Math.floor(a.length/2)];
-}
-
-function splitVisualOcrLine(line){
- const words=line.words.slice().sort((a,b)=>(a.bbox.x0||0)-(b.bbox.x0||0));
- if(words.length<2)return {left:"",right:line.text,split:false};
-
- const heights=words.map(w=>Math.max(1,(w.bbox.y1||0)-(w.bbox.y0||0)));
- const gaps=[];
- for(let i=0;i<words.length-1;i++){
-  gaps.push({
-   i,
-   gap:(words[i+1].bbox.x0||0)-(words[i].bbox.x1||0)
-  });
+ // 先处理真正的列分隔符；不要先按英文逗号切，因为逗号经常属于英文释义。
+ if(/\t/.test(text)){
+  const p=text.split(/\t+/).map(cleanOcrText).filter(Boolean);
+  if(p.length>=2)return {left:p[0],right:p.slice(1).join(" "),kind:"pair"};
  }
- if(!gaps.length)return {left:"",right:line.text,split:false};
- const biggest=gaps.reduce((a,b)=>b.gap>a.gap?b:a,gaps[0]);
- const threshold=Math.max(22,median(heights)*1.15);
-
- if(biggest.gap>=threshold){
-  const left=cleanOcrText(words.slice(0,biggest.i+1).map(w=>w.text).join(""));
-  const right=cleanOcrText(words.slice(biggest.i+1).map(w=>w.text).join(" "));
-  if(left&&right)return {left,right,split:true};
- }
- return {left:"",right:cleanOcrText(words.map(w=>w.text).join(" ")),split:false};
-}
-
-function smartPairOcr(blocks,rawText){
- const lines=flattenOcrLines(blocks);
- if(!lines.length){
-  const fallback=String(rawText||"").split(/\r?\n/).map(x=>cleanOcrText(x)).filter(Boolean);
-  return fallback.map(x=>({front:"",back:x}));
+ if(/\s{2,}/.test(text)){
+  const p=text.split(/\s{2,}/).map(cleanOcrText).filter(Boolean);
+  if(p.length>=2)return {left:p[0],right:p.slice(1).join(" "),kind:"pair"};
  }
 
- const visual=lines.map((line,i)=>{
-  const p=splitVisualOcrLine(line);
-  return {
-   ...p,
-   y:(line.bbox?.y0||line.words[0]?.bbox?.y0||0),
-   h:Math.max(1,(line.bbox?.y1||0)-(line.bbox?.y0||0)),
-   order:i
-  };
- }).filter(x=>x.left||x.right);
+ // 最重要：中文正面 + 英文背面。
+ const cnEn=text.match(/^([\u3400-\u9fff、，。；：？！“”‘’（）《》〈〉·\-—\s]+?)\s+([A-Za-z][A-Za-z0-9 ,.'’()\-–—/;:&]+.*)$/);
+ if(cnEn){
+  return {left:cleanOcrText(cnEn[1]),right:cleanOcrText(cnEn[2]),kind:"pair"};
+ }
 
- const rows=[];
- for(const row of visual){
-  const prev=rows[rows.length-1];
-  const closeEnough=prev&&row.y-(prev.y+prev.h)<=Math.max(prev.h,row.h)*0.9;
-  if(!row.left&&prev&&prev.left&&closeEnough){
-   prev.right=cleanOcrText(prev.right+" "+row.right);
-   prev.h=Math.max(prev.h,row.y+row.h-prev.y);
+ // 英文正面 + 中文背面也支持。
+ const enCn=text.match(/^([A-Za-z][A-Za-z0-9 ,.'’()\-–—/;:&]+?)\s+([\u3400-\u9fff].*)$/);
+ if(enCn){
+  return {left:cleanOcrText(enCn[1]),right:cleanOcrText(enCn[2]),kind:"pair"};
+ }
+
+ // 常规手工批量导入格式作为兜底。
+ const basic=splitImportLine(text,"auto");
+ if(basic)return {left:basic.left,right:basic.right,kind:"pair"};
+
+ if(isChineseOnly(text))return {left:text,right:"",kind:"front"};
+ if(isEnglishOnly(text))return {left:"",right:text,kind:"back"};
+ return {left:"",right:text,kind:"unknown"};
+}
+
+function getOcrLines(data){
+ const lines=Array.isArray(data?.lines)?data.lines:[];
+ return lines.map(line=>({
+  text:cleanOcrText(line?.text||""),
+  confidence:Number(line?.confidence??0),
+  bbox:line?.bbox||null
+ })).filter(x=>x.text);
+}
+
+function parseVocabularyOcr(data){
+ const source=getOcrLines(data);
+
+ // 优先使用 Tesseract 的“整行”结果。
+ // 旧版按 word 的横向间距猜左右列，会把一个词拆成多个垃圾卡片，这里彻底取消。
+ if(!source.length){
+  const raw=String(data?.text||"");
+  return parseVocabularyLines(raw.split(/\r?\n/));
+ }
+ return parseVocabularyLines(source.map(x=>x.text));
+}
+
+function parseVocabularyLines(inputLines){
+ const lines=inputLines.map(cleanOcrText).filter(Boolean);
+ const cards=[];
+ let pendingFront="";
+ let pendingBack="";
+
+ function flush(){
+  const front=cleanOcrText(pendingFront),back=cleanOcrText(pendingBack);
+  if(front&&back)cards.push({front,back});
+  pendingFront="";
+  pendingBack="";
+ }
+
+ for(const line of lines){
+  const p=splitOcrLine(line);
+  if(!p)continue;
+
+  if(p.kind==="pair"){
+   // 新的完整“正面 + 背面”直接成为一张卡。
+   flush();
+   cards.push({front:p.left,back:p.right});
    continue;
   }
-  rows.push({left:row.left,right:row.right,y:row.y,h:row.h});
- }
 
- return rows
-  .map(r=>({front:cleanOcrText(r.left),back:cleanOcrText(r.right)}))
-  .filter(r=>r.front||r.back);
+  if(p.kind==="front"){
+   if(pendingFront&&!pendingBack){
+    // 连续中文行：合并，避免把一个中文词拆成两张卡。
+    pendingFront=cleanOcrText(pendingFront+p.left);
+   }else{
+    flush();
+    pendingFront=p.left;
+   }
+   continue;
+  }
+
+  if(p.kind==="back"){
+   if(pendingFront){
+    pendingBack=cleanOcrText(pendingBack+" "+p.right);
+    // 下一行如果仍然是英文，会继续合并。
+   }else if(cards.length){
+    cards[cards.length-1].back=cleanOcrText(cards[cards.length-1].back+" "+p.right);
+   }
+   continue;
+  }
+
+  // 无法判断语言的行：只在已经有正面时作为背面补充。
+  if(pendingFront){
+   pendingBack=cleanOcrText(pendingBack+" "+p.right);
+  }else if(cards.length){
+   cards[cards.length-1].back=cleanOcrText(cards[cards.length-1].back+" "+p.right);
+  }
+ }
+ flush();
+
+ // 去重 + 去掉明显的 OCR 垃圾行。
+ const seen=new Set();
+ return cards.filter(c=>{
+  c.front=cleanOcrText(c.front);c.back=cleanOcrText(c.back);
+  if(!c.front||!c.back)return false;
+  const key=(c.front+"\t"+c.back).toLowerCase();
+  if(seen.has(key))return false;
+  seen.add(key);
+  if(c.front.length>120||c.back.length>500)return false;
+  return true;
+ });
 }
 
 async function recognizeImages(files){
@@ -1235,7 +1286,6 @@ async function recognizeImages(files){
  $("ocrStatus").textContent=`已选择 ${files.length} 张图片，正在加载 OCR 组件……`;
  try{await ensureTesseract()}catch(e){$("ocrStatus").textContent=e.message;return}
 
- const results=[];
  try{
   if(!ocrWorker||ocrWorkerLanguage!==language){
    if(ocrWorker)await ocrWorker.terminate();
@@ -1251,28 +1301,32 @@ async function recognizeImages(files){
    ocrWorkerLanguage=language;
   }
 
+  // 词汇表/教材页面更适合统一文本块模式，避免把每个词拆成碎片。
+  await ocrWorker.setParameters({
+   tessedit_pageseg_mode:"6",
+   preserve_interword_spaces:"1"
+  });
+
+  const allCards=[];
   for(let i=0;i<files.length;i++){
    $("ocrStatus").textContent=`正在${mode==="fast"?"快速":"精确"}识别第 ${i+1}/${files.length} 张图片……`;
    const img=await preprocessImage(files[i],mode);
-   const r=await ocrWorker.recognize(img,{rotateAuto:mode==="precise"},{blocks:true});
-   results.push(r);
+   const r=await ocrWorker.recognize(img,{rotateAuto:mode==="precise"});
+   const cards=parseVocabularyOcr(r?.data||{});
+   allCards.push(...cards);
   }
+
+  ocrCards=allCards;
+  if(!ocrCards.length){
+   $("ocrStatus").textContent="这张图片没有整理出完整的正反面配对。建议换“精确”模式，或拍得更正、更清晰一些。";
+  }else{
+   $("ocrStatus").textContent=`识别完成：整理出 ${ocrCards.length} 张候选纸卡。已合并英文换行，请检查后再导入。`;
+  }
+  renderOcr();
  }catch(e){
   ocrWorker=null;
   $("ocrStatus").textContent=`OCR 失败：${e?.message||"组件或网络加载失败"}。请检查网络后重试。`;
-  return;
  }
-
- ocrCards=[];
- results.forEach(r=>{
-  ocrCards.push(...smartPairOcr(r?.data?.blocks||[],r?.data?.text||""));
- });
- if(!ocrCards.length){
-  $("ocrStatus").textContent="识别完成，但没有检测到文字。建议拍清晰、正对纸面、光线均匀的图片。";
- }else{
-  $("ocrStatus").textContent=`识别完成：${ocrCards.length} 张候选纸卡。已自动合并换行内容，请检查后再导入。`;
- }
- renderOcr();
 }
 
 $("imageInput").onchange=()=>recognizeImages([...$("imageInput").files]);
@@ -1298,10 +1352,9 @@ $("importOcr").onclick=()=>{
  if(!rows.length){alert("请先补全至少一张纸卡的正面和背面。");return}
  const f=currentFolder();if(!f){alert("请先选择一个文件夹。");return}
  f.cards.push(...rows.map(x=>({id:"c_"+Date.now()+"_"+Math.random().toString(36).slice(2),front:x.front.trim(),back:x.back.trim(),reviewed:false,rating:"",reviewCount:0,lastReviewed:null,interval:0,dueAt:null})));
- cardIndex=f.cards.length-rows.length;
- const ok=persist();renderFolder();renderFolders();renderHome();
+ cardIndex=f.cards.length-rows.length;const ok=persist();renderFolder();renderFolders();renderHome();
  if(ok){$("addPage").classList.remove("open");alert(`已保存 ${rows.length} 张纸卡。`)}
- else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 正常打开下载后的 HTML。");
+ else alert("卡片已加入当前页面，但浏览器拒绝持久化保存。请用 Safari/Chrome 打开下载后的 HTML。");
 };
 
 /* Navigation */
